@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Logistic Regression Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEF1; --panel:#F8FAFB; --ink:#16222E; --muted:#56687A; --rule:#D3DCE3;
+  --point:#2E6A8E; --fit:#8A2F5B; --ols:#C2601A; --probit:#2F6B3A; --pop:#6B7A88;
+  --bad:rgba(194,96,26,.10); --zero:#D6E3EC; --accent:#2E6A8E; --grid:#E1E7EC; --warnbg:#FBF1E6; --warnrule:#E8C9A6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11181E; --panel:#19232B; --ink:#E2E9EE; --muted:#93A4B2; --rule:#2B3843;
+    --point:#6DB0D4; --fit:#E27DAB; --ols:#F0A060; --probit:#7CC98A; --pop:#9AA8B4;
+    --bad:rgba(240,160,96,.12); --zero:#2A3E4C; --accent:#6DB0D4; --grid:#222E37; --warnbg:#2A2219; --warnrule:#5A4630;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11181E; --panel:#19232B; --ink:#E2E9EE; --muted:#93A4B2; --rule:#2B3843;
+  --point:#6DB0D4; --fit:#E27DAB; --ols:#F0A060; --probit:#7CC98A; --pop:#9AA8B4;
+  --bad:rgba(240,160,96,.12); --zero:#2A3E4C; --accent:#6DB0D4; --grid:#222E37; --warnbg:#2A2219; --warnrule:#5A4630;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 48px}
+header{margin-bottom:22px;max-width:72ch}
+h1{font-family:"Newsreader",Georgia,"Times New Roman",serif;font-weight:600;
+  font-size:clamp(1.7rem,3.2vw,2.4rem);line-height:1.1;margin:0 0 8px;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted)}
+h2{font-family:"Newsreader",Georgia,serif;font-weight:600;font-size:1.2rem;margin:0 0 12px}
+h3{font-size:1rem;margin:16px 0 6px}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:18px}
+aside.panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:860px){aside.panel{position:static;max-height:none}}
+.group{padding:12px 0;border-top:1px solid var(--rule)}
+.group:first-of-type{border-top:0;padding-top:0}
+.group h3{font-size:.95rem;font-weight:600;margin:0 0 8px}
+.ctl{margin:8px 0 12px}
+.ctl label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);margin-bottom:4px}
+.ctl input[type=number]{width:78px;font:inherit;font-size:.88rem;color:var(--ink);background:var(--bg);
+  border:1px solid var(--rule);border-radius:6px;padding:3px 6px;text-align:right}
+.txt{width:100%;font:inherit;font-size:.9rem;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:6px;padding:5px 8px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.9rem;padding:7px 8px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel);font-weight:600}
+.btn{font:inherit;font-size:.9rem;padding:7px 12px;border-radius:8px;border:1px solid var(--rule);
+  background:var(--bg);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.reset-btn{width:100%;margin-bottom:14px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.88rem;color:var(--muted);margin-top:8px}
+.check input{margin-top:3px;accent-color:var(--accent)}
+.hint{font-size:.82rem;color:var(--muted);margin:2px 0 0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{display:grid;gap:20px;min-width:0}
+main>*{min-width:0}
+.eq{overflow-wrap:anywhere}
+.hat{position:relative;display:inline-block;line-height:1}
+.hat::after{content:"^";position:absolute;left:50%;transform:translateX(-50%);line-height:1;font-style:normal;font-weight:400;font-size:.75em;pointer-events:none}
+.hat.lc::after{top:-.12em}
+.hat.uc::after{top:-.42em}
+i.hat::after{left:66%}
+i.hat.lc::after{top:-.34em}
+i.hat.uc::after{top:-.55em}
+
+#t-class2 td:first-child{white-space:normal}
+.plot h2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.plot h2 small{font-family:"Public Sans",system-ui,sans-serif;font-weight:500;font-size:.85rem;color:var(--muted)}
+.figure{max-width:760px}
+.eq{font-size:.95rem;margin:8px 0 0;color:var(--ink)}
+.eq i,.math{font-family:"Newsreader",Georgia,serif;font-size:1.08em}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:"Public Sans",system-ui,sans-serif;fill:var(--muted);font-size:12px}
+.legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend [hidden]{display:none}
+.sw{width:20px;height:0;border-top:2.5px solid var(--fit)}
+.sw.ols{border-top:2px dashed var(--ols)}
+.sw.probit{border-top:2.5px dotted var(--probit)}
+.sw.pop{border-top:1.5px dashed var(--pop)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--point);opacity:.7}
+.ring{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--point)}
+.dia{width:9px;height:9px;background:var(--ink);transform:rotate(45deg)}
+.badsw{width:16px;height:10px;background:var(--bad);border:1px solid var(--ols)}
+.prose{max-width:80ch}
+.prose p{margin:0 0 10px}
+.prose ol,.prose ul{margin:6px 0 10px;padding-left:1.3em}
+.prose li{margin:0 0 10px}
+.def{font-size:.86rem;color:var(--muted);margin:2px 0 0 1.2em;max-width:72ch}
+.def:empty{display:none}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--panel);border-color:var(--accent);font-weight:600}
+.more-btn{margin-top:14px}
+.more{margin-top:14px;padding-top:4px;border-top:1px solid var(--rule)}
+.more[hidden]{display:none}
+.warn{background:var(--warnbg);border:1px solid var(--warnrule);border-radius:8px;padding:10px 14px;margin:10px 0 0;max-width:80ch}
+.warn[hidden]{display:none}
+.tables{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:1100px){.tables{grid-template-columns:1fr}}
+.tables .wide{grid-column:1/-1}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+caption{text-align:left;font-weight:600;padding-bottom:6px}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{color:var(--muted);font-weight:500;border-bottom:1.5px solid var(--ink)}
+.note{color:var(--muted);font-size:.88rem;margin:12px 0 0;max-width:80ch}
+/* own-data section */
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.own-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.btn.primary{background:var(--accent);color:var(--panel);border-color:var(--accent);font-weight:600}
+.od-text{width:100%;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;resize:vertical}
+.sel{font:inherit;font-size:.9rem;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:6px;padding:4px 6px;max-width:100%}
+.ctl .sel{width:100%}
+.ctl .lab{font-size:.88rem;color:var(--muted)}
+.own-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:24px}
+@media (max-width:760px){.own-grid{grid-template-columns:1fr}}
+.fs{border:1px solid var(--rule);border-radius:8px;padding:6px 12px 10px;margin:8px 0 12px}
+.fs legend{font-size:.88rem;color:var(--muted);padding:0 4px}
+.od-x{border:1px solid var(--rule);border-radius:8px;padding:6px 12px;max-height:360px;overflow:auto;background:var(--bg)}
+.xrow{padding:6px 0;border-bottom:1px solid var(--rule)}
+.xrow:last-child{border-bottom:0}
+.xrow .check{margin-top:2px;color:var(--ink)}
+.xrow .sub{margin-left:24px;font-size:.84rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+.xrow .sub[hidden]{display:none}
+.warn-p{background:var(--warnbg);border:1px solid var(--warnrule);border-radius:8px;padding:10px 14px}
+.own-tbl{margin:14px 0}
+.tbl-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:600;padding-bottom:6px}
+.copy-btn{font:inherit;font-size:.78rem;font-weight:500;padding:2px 8px;border-radius:6px;border:1px solid var(--rule);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap}
+.copy-btn:hover{border-color:var(--accent);color:var(--ink)}
+.own-tbl.narrow{max-width:460px}
+table.small{font-size:.82rem}
+.own-h{font-family:"Newsreader",Georgia,serif;font-size:1.1rem;font-weight:600;margin:22px 0 4px}
+#own .figure svg{max-width:560px}
+#od-roc{max-width:420px!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Logistic Regression Explorer</h1>
+    <p>Explore logistic regression for a binary outcome (Y = 0 or 1) and a continuous predictor. Set how strongly X predicts the outcome, how common the outcome is, and the scale of X. A sample is drawn from that population, and the logistic, probit and OLS models are refit with every change.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Controls">
+      <button type="button" class="btn reset-btn" id="reset">Return to default values</button>
+      <div class="group">
+        <h3>Association (population)</h3>
+        <div class="ctl">
+          <label for="or">Odds ratio per SD of X <input type="number" id="or-n" min="1" max="20" step="0.1" aria-label="Odds ratio per SD value"></label>
+          <input type="range" id="or" min="0" max="2.9957" step="0.0001" aria-label="Odds ratio per SD">
+          <p class="hint">1 = no association</p>
+        </div>
+        <div class="seg" role="group" aria-label="Direction">
+          <button type="button" id="pos" aria-pressed="true">Positive</button>
+          <button type="button" id="neg" aria-pressed="false">Negative</button>
+        </div>
+      </div>
+      <div class="group">
+        <h3>Outcome</h3>
+        <div class="ctl">
+          <label for="yname">Label</label>
+          <input type="text" id="yname" class="txt" placeholder="Y" maxlength="40" autocomplete="off">
+        </div>
+        <div class="ctl">
+          <label for="p0">P(Y = 1) at the mean of X <input type="number" id="p0-n" min="0.02" max="0.98" step="0.01" aria-label="Base rate value"></label>
+          <input type="range" id="p0" min="0.02" max="0.98" step="0.01">
+        </div>
+      </div>
+      <div class="group">
+        <h3>Predictor</h3>
+        <div class="ctl">
+          <label for="xname">Label</label>
+          <input type="text" id="xname" class="txt" placeholder="X" maxlength="40" autocomplete="off">
+        </div>
+        <div class="ctl">
+          <label for="mx">Mean <input type="number" id="mx-n" step="1" aria-label="X mean value"></label>
+          <input type="range" id="mx" min="-100" max="200" step="1">
+        </div>
+        <div class="ctl">
+          <label for="sx">Standard deviation <input type="number" id="sx-n" min="0.5" step="0.5" aria-label="X SD value"></label>
+          <input type="range" id="sx" min="0.5" max="50" step="0.5">
+        </div>
+      </div>
+      <div class="group">
+        <h3>Sample</h3>
+        <div class="ctl">
+          <label for="n">Sample size n <input type="number" id="n-n" min="20" max="2000" step="1" aria-label="Sample size value"></label>
+          <input type="range" id="n" min="20" max="2000" step="1">
+        </div>
+        <button type="button" class="btn" id="resample">Draw a new sample</button>
+      </div>
+      <div class="group">
+        <h3>Display</h3>
+        <label class="check"><input type="checkbox" id="ols"> OLS line (linear probability model)</label>
+        <label class="check"><input type="checkbox" id="probit"> Normal ogive (probit model; see the last section)</label>
+        <label class="check"><input type="checkbox" id="bins"> Observed proportions in bins of X</label>
+        <label class="check"><input type="checkbox" id="pop"> Population curve</label>
+      </div>
+      <div class="group">
+        <h3>Classification</h3>
+        <div class="ctl">
+          <label for="cut">Cutoff for predicting Y = 1 <input type="number" id="cut-n" min="0.05" max="0.95" step="0.01" aria-label="Cutoff value"></label>
+          <input type="range" id="cut" min="0.05" max="0.95" step="0.01">
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="prose intro">
+        <p>Some of the things that we want to predict, such as whether or not someone leaves the organization or whether or not someone uses a certain benefit, are dichotomous. For reasons explained below, OLS is inappropriate for such dependent variables. Instead, we can use <em>logistic regression</em>. To see why this is necessary, consider the following plot and the equations below it, which produce the curve and the line inside it.</p>
+      </div>
+      <section class="panel plot">
+        <div class="figure">
+          <h2><span id="t-prob">Probability that Y = 1, by X</span> <small id="sub-prob"></small></h2>
+          <svg id="prob" viewBox="0 0 560 400" role="img" aria-label="Binary outcome plotted against X with fitted logistic curve"></svg>
+          <div class="legend">
+            <span><i class="dot"></i><span id="lg-pts">Cases (Y = 0 at bottom, Y = 1 at top)</span></span>
+            <span><i class="sw"></i>Logistic curve</span>
+            <span id="lg-probit"><i class="sw probit"></i>Normal ogive (probit)</span>
+            <span id="lg-ols"><i class="sw ols"></i>OLS line</span>
+            <span id="lg-bins"><i class="dia"></i>Observed proportion in a bin of X</span>
+            <span id="lg-pop"><i class="sw pop"></i>Population curve</span>
+            <span id="lg-bad"><i class="badsw"></i>Impossible probabilities</span>
+          </div>
+          <p class="eq" id="eq-logit"></p>
+          <p class="eq" id="eq-prob"></p>
+          <p class="def" id="def-e"></p>
+          <p class="eq" id="eq-probit"></p>
+          <p class="def" id="def-phi"></p>
+          <p class="eq" id="eq-ols"></p>
+          <button type="button" class="btn more-btn" id="more-e-btn" aria-pressed="false" aria-controls="more-e">About e</button>
+          <div class="more prose" id="more-e" hidden></div>
+          <div class="warn" id="warn" role="status" hidden></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Why OLS doesn't work for a binary outcome</h2>
+        <div class="prose" id="why"></div>
+        <div class="figure">
+          <h3 id="t-res">OLS residuals plotted against OLS predicted values</h3>
+          <svg id="res" viewBox="0 0 560 360" role="img" aria-label="Residuals from the OLS model plotted against its predicted values"></svg>
+          <div class="legend">
+            <span><i class="dot"></i><span id="lg-r1">Y = 1</span></span>
+            <span><i class="ring"></i><span id="lg-r0">Y = 0</span></span>
+            <span><i class="badsw"></i>Predicted values outside 0 to 1</span>
+          </div>
+          <div class="prose" id="res-explain" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>From probabilities to odds to log odds</h2>
+        <div class="prose" id="odds"></div>
+        <div class="figure">
+          <h3>The same model on the log-odds scale</h3>
+          <svg id="logit" viewBox="0 0 560 380" role="img" aria-label="Fitted log odds plotted against X, a straight line"></svg>
+          <div class="legend">
+            <span><i class="sw"></i>Fitted log odds (a straight line)</span>
+            <span id="lg-bins2"><i class="dia"></i>Observed log odds in a bin of X</span>
+          </div>
+          <p class="note">Left axis: log odds. Right axis: the corresponding probability. Observed log odds in each bin use the empirical logit, ln[(k + .5)/(m − k + .5)], where k of the m cases in the bin have Y = 1, so a bin with all 0s or all 1s still has a finite value.</p>
+        </div>
+      </section>
+
+      <div class="prose" id="interp" aria-live="polite"></div>
+
+      <section class="panel">
+        <h2 id="t-results">Logistic regression of Y on X</h2>
+        <div class="tables">
+          <div class="tbl-wrap wide">
+            <table>
+              <caption>Coefficients</caption>
+              <thead><tr><th>Term</th><th>Estimate</th><th>SE</th><th>z</th><th>p</th><th>Odds ratio</th><th>95% CI for odds ratio</th></tr></thead>
+              <tbody id="t-coef"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="note" style="margin-top:6px">Estimates are maximum likelihood. z is the Wald statistic (estimate / SE); its square is the Wald χ² that some programs report. The odds ratio for X is e<sup>b</sup>, and its confidence interval is e<sup>b ± 1.96·SE</sup>. For the intercept, e<sup>a</sup> is the odds that Y = 1 when X = 0.</p>
+        <div class="prose" id="fit-intro" style="margin-top:20px"></div>
+        <div class="tbl-wrap" style="max-width:430px">
+          <table>
+            <caption>Model fit</caption>
+            <tbody id="t-fit"></tbody>
+          </table>
+        </div>
+        <div class="prose" id="fit-interp" style="margin-top:14px"></div>
+        <div class="prose" id="beyond" style="margin-top:20px"></div>
+        <div class="tables" style="margin-top:6px">
+          <div class="tbl-wrap">
+            <table>
+              <caption id="cap-class">Classification</caption>
+              <thead><tr><th>Observed</th><th>Predicted 0</th><th>Predicted 1</th><th>% correct</th></tr></thead>
+              <tbody id="t-class"></tbody>
+            </table>
+          </div>
+          <div class="tbl-wrap">
+            <table style="margin-top:26px"><tbody id="t-class2"></tbody></table>
+          </div>
+        </div>
+        <div class="prose" id="class-interp" style="margin-top:14px"></div>
+      </section>
+
+      <section class="panel">
+        <h2>A related approach: probit regression</h2>
+        <div class="prose" id="ogive"></div>
+        <div class="figure">
+          <h3 id="t-cmp">Fitted logistic curve and normal ogive</h3>
+          <svg id="cmp" viewBox="0 0 560 360" role="img" aria-label="Fitted logistic curve and fitted probit curve plotted against X"></svg>
+          <div class="legend">
+            <span><i class="sw"></i>Logistic curve</span>
+            <span><i class="sw probit"></i>Normal ogive (probit)</span>
+            <span id="lg-bins3"><i class="dia"></i>Observed proportion in a bin of X</span>
+          </div>
+        </div>
+        <div class="tbl-wrap figure" style="margin-top:16px">
+          <table>
+            <caption>Probit model (normal ogive)</caption>
+            <thead><tr><th>Term</th><th>Estimate</th><th>SE</th><th>z</th><th>p</th></tr></thead>
+            <tbody id="t-probit"></tbody>
+          </table>
+          <p class="note">Maximum likelihood estimates. Standard errors use the expected information, as in R's glm; programs that use the observed information (Stata's probit, for example) give slightly different probit standard errors.</p>
+        </div>
+        <div class="prose" id="when" style="margin-top:16px"></div>
+        <button type="button" class="btn more-btn" id="more-phi-btn" aria-pressed="false" aria-controls="more-phi">About Φ</button>
+        <div class="more prose" id="more-phi" hidden></div>
+      </section>
+
+      <section class="panel" id="own">
+        <h2>Analyze your own data</h2>
+        <div class="prose"><p>Fit logistic and probit regressions to your own data. Your data never leave this page: everything is computed in your browser, and nothing is uploaded or stored.</p></div>
+
+        <h3>1. Enter your data</h3>
+        <div class="prose"><p>Upload a CSV or tab-delimited file, or paste the data below. The first row must contain variable names. The outcome must have exactly two distinct values (for example, 0 and 1, or yes and no). Predictors can be numeric or categorical; categorical predictors are dummy coded against a reference category you choose. Cases missing any variable in the model are dropped (listwise deletion); blank cells, NA and a single period count as missing.</p></div>
+        <div class="own-row">
+          <label class="btn" for="od-file">Choose a file</label>
+          <input type="file" id="od-file" accept=".csv,.tsv,.txt,text/csv,text/plain" class="vh">
+          <button type="button" class="btn" id="od-sim">Use the current simulated sample</button>
+          <span class="hint" id="od-file-name"></span>
+        </div>
+        <textarea id="od-text" class="od-text" rows="7" spellcheck="false" placeholder="Paste data here, for example:&#10;left,tenure,dept&#10;1,2.5,sales&#10;0,7.1,hr"></textarea>
+        <div class="own-row"><button type="button" class="btn primary" id="od-read">Read data</button></div>
+        <div class="prose" id="od-data-msg" aria-live="polite"></div>
+        <div class="tbl-wrap" id="od-preview"></div>
+
+        <div id="od-model" hidden>
+          <h3>2. Specify the model</h3>
+          <div class="own-grid">
+            <div>
+              <div class="ctl"><label for="od-y">Outcome (dependent variable)</label><select id="od-y" class="sel"></select></div>
+              <div class="ctl"><label for="od-ev">Value coded as 1 (the event)</label><select id="od-ev" class="sel"></select></div>
+              <fieldset class="fs"><legend>Model</legend>
+                <label class="check"><input type="radio" name="od-mod" value="logit" checked> Logistic</label>
+                <label class="check"><input type="radio" name="od-mod" value="probit"> Probit</label>
+                <label class="check"><input type="radio" name="od-mod" value="both"> Both</label>
+              </fieldset>
+              <div class="ctl"><label for="od-cut">Classification cutoff <input type="number" id="od-cut" min="0.01" max="0.99" step="0.01" value="0.5"></label></div>
+            </div>
+            <div>
+              <div class="ctl"><span class="lab">Predictors</span></div>
+              <div id="od-x" class="od-x"></div>
+            </div>
+          </div>
+          <div class="own-row"><button type="button" class="btn primary" id="od-run">Run the analysis</button></div>
+          <div class="prose" id="od-run-msg" aria-live="polite"></div>
+        </div>
+
+        <div id="od-out" hidden>
+          <h3>3. Results</h3>
+          <div class="own-row">
+            <button type="button" class="btn" id="od-dl-tables">Download all tables (CSV)</button>
+            <button type="button" class="btn" id="od-dl-pred">Download predicted values (CSV)</button>
+            <button type="button" class="btn" id="od-dl-roc">Download ROC curve (SVG)</button>
+          </div>
+          <p class="hint" id="od-dl-msg" aria-live="polite"></p>
+          <div id="od-results"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DEF={or:4,dir:1,p0:0.5,mx:50,sx:10,n:200,cut:0.5,ols:true,probit:false,bins:true,pop:false,seed:20261380};
+  const state=Object.assign({},DEF,{xname:"",yname:"",moreE:false,morePhi:false});
+  const NMAX=2000;
+  const $=id=>document.getElementById(id);
+  const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  // ---------- random numbers ----------
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function normals(n,rand){const o=[];while(o.length<n){const u=rand()||1e-12,v=rand(),m=Math.sqrt(-2*Math.log(u));o.push(m*Math.cos(2*Math.PI*v));if(o.length<n)o.push(m*Math.sin(2*Math.PI*v));}return o;}
+  let poolSeed=null,pool=null;
+  function getPool(seed){if(poolSeed!==seed){const r=mulberry32(seed);const z=normals(NMAX,r),u=[];for(let i=0;i<NMAX;i++)u.push(r());pool={z,u};poolSeed=seed;}return pool;}
+
+  // ---------- distributions ----------
+  function erfc(x){const z=Math.abs(x),t=1/(1+0.5*z);
+    const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));
+    return x>=0?r:2-r;}
+  const Phi=x=>0.5*erfc(-x/Math.SQRT2);
+  const phi=x=>Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);
+  const sig=e=>e>=0?1/(1+Math.exp(-e)):Math.exp(e)/(1+Math.exp(e));
+  const logit=p=>Math.log(p/(1-p));
+  const pZ=z=>!isFinite(z)?0:erfc(Math.abs(z)/Math.SQRT2);           // two-sided normal p
+  const pChi1=c=>c<=0?1:erfc(Math.sqrt(c/2));                          // upper tail, chi-square with 1 df
+
+  // ---------- data ----------
+  function generate(s=state){
+    const P=getPool(s.seed),n=s.n,b=s.dir*Math.log(s.or)/s.sx,a=logit(s.p0)-b*s.mx;
+    const x=[],y=[];
+    for(let i=0;i<n;i++){const xi=s.mx+s.sx*P.z[i];x.push(xi);y.push(P.u[i]<sig(a+b*xi)?1:0);}
+    return{x,y,a,b};
+  }
+
+  // ---------- models ----------
+  function separation(x,y){let max0=-Infinity,min0=Infinity,max1=-Infinity,min1=Infinity;
+    for(let i=0;i<x.length;i++){if(y[i]){max1=Math.max(max1,x[i]);min1=Math.min(min1,x[i]);}else{max0=Math.max(max0,x[i]);min0=Math.min(min0,x[i]);}}
+    return max0<min1||max1<min0;}
+  function fitBinary(x,y,link){
+    const n=x.length,k=y.reduce((s,v)=>s+v,0),ybar=k/n;
+    if(k===0||k===n)return{fail:"constant"};
+    if(separation(x,y))return{fail:"separation"};
+    const L=link==="logit";
+    function ll(a,b){let s=0;for(let i=0;i<n;i++){const e=a+b*x[i];
+      if(L){const lp=e>=0?-Math.log1p(Math.exp(-e)):e-Math.log1p(Math.exp(e));s+=y[i]?lp:lp-e;}
+      else{const p=Math.min(Math.max(Phi(e),1e-300),1-1e-16);s+=y[i]?Math.log(p):Math.log(1-p);}}
+      return s;}
+    let a=L?logit(ybar):logit(ybar)/1.6,b=0,cur=ll(a,b),I=null,conv=false,it=0;
+    for(it=0;it<200;it++){
+      let g0=0,g1=0,i00=0,i01=0,i11=0;
+      for(let i=0;i<n;i++){const e=a+b*x[i];let r,w;
+        if(L){const p=sig(e);r=y[i]-p;w=p*(1-p);}
+        else{const p=Math.min(Math.max(Phi(e),1e-12),1-1e-12),d=phi(e),v=p*(1-p);r=(y[i]-p)*d/v;w=d*d/v;}
+        g0+=r;g1+=r*x[i];i00+=w;i01+=w*x[i];i11+=w*x[i]*x[i];}
+      const det=i00*i11-i01*i01;if(!(det>0))break;
+      I=[i00,i01,i11,det];
+      const s0=(i11*g0-i01*g1)/det,s1=(i00*g1-i01*g0)/det;
+      let t=1,na,nb,nl;
+      for(;;){na=a+t*s0;nb=b+t*s1;nl=ll(na,nb);if(nl>=cur-1e-12||t<1e-10)break;t/=2;}
+      const change=Math.max(Math.abs(na-a),Math.abs(nb-b));a=na;b=nb;cur=nl;
+      if(change<1e-10*(1+Math.abs(a)+Math.abs(b))){conv=true;break;}
+    }
+    // information at the final estimates
+    {let i00=0,i01=0,i11=0;for(let i=0;i<n;i++){const e=a+b*x[i];let w;
+      if(L){const p=sig(e);w=p*(1-p);}else{const p=Math.min(Math.max(Phi(e),1e-12),1-1e-12),d=phi(e);w=d*d/(p*(1-p));}
+      i00+=w;i01+=w*x[i];i11+=w*x[i]*x[i];}I=[i00,i01,i11,i00*i11-i01*i01];}
+    if(!conv||!(I[3]>0))return{fail:"noconv"};
+    const seA=Math.sqrt(I[2]/I[3]),seB=Math.sqrt(I[0]/I[3]);
+    const ll0=n*(ybar*Math.log(ybar)+(1-ybar)*Math.log(1-ybar));
+    return{a,b,seA,seB,ll:cur,ll0,n,k,ybar};
+  }
+  function fitOLS(x,y){const n=x.length;let mx=0,my=0;for(let i=0;i<n;i++){mx+=x[i];my+=y[i];}mx/=n;my/=n;
+    let sxx=0,sxy=0;for(let i=0;i<n;i++){sxx+=(x[i]-mx)**2;sxy+=(x[i]-mx)*(y[i]-my);}
+    const b=sxy/sxx,a=my-b*mx;return{a,b,mx,my,sx:Math.sqrt(sxx/(n-1))};}
+  function auc(p,y){const idx=p.map((v,i)=>i).sort((i,j)=>p[i]-p[j]),rank=new Array(p.length);
+    for(let i=0;i<idx.length;){let j=i;while(j+1<idx.length&&p[idx[j+1]]===p[idx[i]])j++;const r=(i+j)/2+1;for(let k=i;k<=j;k++)rank[idx[k]]=r;i=j+1;}
+    let n1=0,s=0;for(let i=0;i<y.length;i++)if(y[i]){n1++;s+=rank[i];}const n0=y.length-n1;return(s-n1*(n1+1)/2)/(n1*n0);}
+
+  // ---------- formatting ----------
+  const f=(v,d=3)=>!isFinite(v)?(v>0?"∞":v<0?"−∞":"—"):(Math.abs(v)<0.5*Math.pow(10,-d)?(0).toFixed(d):v.toFixed(d)).replace("-","−");
+  const cd=v=>{const a=Math.abs(v);return a>=100?1:a>=10?2:a>=0.1?3:a>=0.01?4:5;};
+  const fc=v=>f(v,cd(v));
+  const fp=p=>!isFinite(p)?"—":p<.001?"< .001":p.toFixed(3).replace(/^0/,"");
+  const fpr=p=>f(p,3).replace(/^0\./,".").replace(/^−0\./,"−.");        // probabilities and R² without leading zero
+  const pEq=p=>p<.001?"p < .001":"p = "+fp(p);
+  const pct=v=>(100*v).toFixed(1)+"%";
+  const sci=ll=>{const l10=ll/Math.LN10;let ex=Math.floor(l10),m=Math.pow(10,l10-ex);if(+m.toFixed(1)>=10){m/=10;ex++;}return `about ${m.toFixed(1)} × 10<sup>${String(ex).replace("-","−")}</sup>`;};
+
+  // ---------- plotting ----------
+  function niceTicks(lo,hi,count){const span=hi-lo,raw=span/count,mag=Math.pow(10,Math.floor(Math.log10(raw))),norm=raw/mag;
+    const step=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag,start=Math.ceil(lo/step-1e-9)*step,t=[];for(let v=start;v<=hi+1e-9;v+=step)t.push(+v.toFixed(10));return t;}
+  const tickLabel=t=>{const d=Math.abs(t)>=10||Number.isInteger(t)?0:Math.abs(t*10-Math.round(t*10))<1e-9?1:2;return f(t,d);};
+  function frame(W,H,lims,xlab,ylab,opt={}){
+    const m={l:58,r:opt.right?52:16,t:14,b:46},pw=W-m.l-m.r,ph=H-m.t-m.b,[x0,x1,y0,y1]=lims;
+    const sx=v=>m.l+(v-x0)/(x1-x0)*pw,sy=v=>m.t+ph-(v-y0)/(y1-y0)*ph;
+    const id="c"+Math.random().toString(36).slice(2,8);
+    let h=`<defs><clipPath id="${id}"><rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+    niceTicks(x0,x1,6).forEach(t=>{h+=`<line x1="${sx(t)}" x2="${sx(t)}" y1="${m.t}" y2="${m.t+ph}" stroke="var(--grid)"/><text x="${sx(t)}" y="${m.t+ph+18}" text-anchor="middle">${tickLabel(t)}</text>`;});
+    (opt.yTicks||niceTicks(y0,y1,6)).forEach(t=>{h+=`<line x1="${m.l}" x2="${m.l+pw}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)"/><text x="${m.l-8}" y="${sy(t)+4}" text-anchor="end">${opt.yFmt?opt.yFmt(t):tickLabel(t)}</text>`;});
+    if(opt.right)opt.right.forEach(([v,lab])=>{if(v>y0&&v<y1)h+=`<line x1="${m.l+pw}" x2="${m.l+pw+4}" y1="${sy(v)}" y2="${sy(v)}" stroke="var(--muted)"/><text x="${m.l+pw+7}" y="${sy(v)+4}">${lab}</text>`;});
+    h+=`<rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" fill="none" stroke="var(--rule)"/>`;
+    h+=`<text x="${m.l+pw/2}" y="${H-8}" text-anchor="middle" style="fill:var(--ink);font-size:13px">${xlab}</text>`;
+    h+=`<text transform="translate(14 ${m.t+ph/2}) rotate(-90)" text-anchor="middle" style="fill:var(--ink);font-size:13px">${ylab}</text>`;
+    if(opt.rightLab)h+=`<text transform="translate(${W-6} ${m.t+ph/2}) rotate(90)" text-anchor="middle" style="fill:var(--ink);font-size:13px">${opt.rightLab}</text>`;
+    return{m,pw,ph,sx,sy,x0,x1,y0,y1,h,clip:`clip-path="url(#${id})"`};
+  }
+  function curve(F,fn,attrs){let d="";const N=160;for(let i=0;i<=N;i++){const xv=F.x0+(F.x1-F.x0)*i/N,yv=fn(xv);if(!isFinite(yv))continue;d+=(d?"L":"M")+F.sx(xv).toFixed(1)+","+F.sy(Math.max(F.y0-5,Math.min(F.y1+5,yv))).toFixed(1);}return`<path d="${d}" fill="none" ${attrs}/>`;}
+  const halo="paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round";
+  function bins(x,y){const n=x.length,k=Math.max(4,Math.min(10,Math.round(n/25))),idx=x.map((v,i)=>i).sort((i,j)=>x[i]-x[j]),out=[];
+    for(let g=0;g<k;g++){const lo=Math.round(g*n/k),hi=Math.round((g+1)*n/k);let sx=0,s1=0;for(let j=lo;j<hi;j++){sx+=x[idx[j]];s1+=y[idx[j]];}const m=hi-lo;if(m>0)out.push({x:sx/m,p:s1/m,k:s1,m});}
+    return out;}
+  function xLimits(x){const lo=Math.min(...x),hi=Math.max(...x),pad=(hi-lo||1)*0.06;return[lo-pad,hi+pad];}
+
+  let storyFn=null;
+  function defaultStory(){if(!storyFn){const g=generate(DEF),Ld=fitBinary(g.x,g.y,"logit"),Od=fitOLS(g.x,g.y);storyFn=k=>sig(Ld.a+Ld.b*(Od.mx+k*Od.sx));}return storyFn;}
+
+  // ---------- render ----------
+  function render(){
+    const {x,y,a:aPop,b:bPop}=generate(),n=x.length;
+    const XN=esc(state.xname.trim()||"X"),YN=esc(state.yname.trim()||"Y"),plain=XN==="X"&&YN==="Y";
+    const L=fitBinary(x,y,"logit"),PR=fitBinary(x,y,"probit"),O=fitOLS(x,y);
+    const ok=!L.fail,okP=!PR.fail,k=y.reduce((s,v)=>s+v,0);
+    const B=bins(x,y),[x0,x1]=xLimits(x);
+
+    // titles and legend
+    $("t-prob").innerHTML=`Probability that ${YN} = 1, by ${XN}`;
+    $("t-results").innerHTML=`Logistic regression of ${YN} on ${XN}`;
+    $("lg-pts").innerHTML=`Cases (${YN} = 0 at bottom, ${YN} = 1 at top; darker where cases are concentrated)`;
+    $("lg-r1").innerHTML=`${YN} = 1`;$("lg-r0").innerHTML=`${YN} = 0`;
+    $("sub-prob").textContent=`n = ${n}, ${k} with ${state.yname.trim()||"Y"} = 1`;
+    $("lg-probit").hidden=!state.probit;$("lg-ols").hidden=!state.ols;$("lg-bins").hidden=!state.bins;$("lg-bins2").hidden=!state.bins;$("lg-pop").hidden=!state.pop;$("lg-bad").hidden=!state.ols;
+
+    // warning
+    const w=$("warn");
+    if(!ok){w.hidden=false;w.innerHTML=L.fail==="constant"?`Every case in this sample has ${YN} = ${k?1:0}, so no model can be estimated. Draw a new sample, increase n, or move P(${YN} = 1) away from the extreme.`:
+      L.fail==="separation"?`<strong>Complete separation.</strong> In this sample, every case with ${YN} = 1 has a ${y[x.indexOf(Math.max(...x))]?"higher":"lower"} value of ${XN} than every case with ${YN} = 0. The likelihood keeps increasing as the weight grows, so maximum likelihood estimates do not exist (they are infinite) for either the logistic or the probit model. Software that reports estimates here is reporting where its iterations stopped. Draw a new sample, increase n, or weaken the association.`:
+      `The estimation did not converge for this sample. Draw a new sample or change the settings.`;}
+    else w.hidden=true;
+
+    // ----- probability plot -----
+    {const F=frame(560,400,[x0,x1,-0.25,1.25],XN,`Probability that ${YN} = 1`,{yTicks:[0,.25,.5,.75,1],yFmt:t=>t===0||t===1?String(t):fpr(t).replace(/0+$/,"")});
+      let h=F.h;
+      if(state.ols){h+=`<rect x="${F.m.l}" y="${F.sy(1.25)}" width="${F.pw}" height="${F.sy(1)-F.sy(1.25)}" fill="var(--bad)"/><rect x="${F.m.l}" y="${F.sy(0)}" width="${F.pw}" height="${F.sy(-0.25)-F.sy(0)}" fill="var(--bad)"/>`;
+        h+=`<text x="${F.m.l+F.pw-6}" y="${F.sy(1.25)+14}" text-anchor="end" style="fill:var(--ols);font-size:11px">Probabilities above 1 are impossible</text>`;
+        h+=`<text x="${F.m.l+F.pw-6}" y="${F.sy(-0.25)-6}" text-anchor="end" style="fill:var(--ols);font-size:11px">Probabilities below 0 are impossible</text>`;}
+      h+=`<line x1="${F.m.l}" x2="${F.m.l+F.pw}" y1="${F.sy(0)}" y2="${F.sy(0)}" stroke="var(--muted)"/><line x1="${F.m.l}" x2="${F.m.l+F.pw}" y1="${F.sy(1)}" y2="${F.sy(1)}" stroke="var(--muted)"/>`;
+      h+=`<g ${F.clip}>`;
+      const rad=n>800?2.2:n>300?2.8:3.4;
+      // points sit exactly on 0 or 1; opacity rises with the number of same-outcome cases nearby
+      {const win=rad*2.2,pts=[];
+        [0,1].forEach(v=>{const s=[];for(let i=0;i<n;i++)if(y[i]===v)s.push(F.sx(x[i]));s.sort((p,q)=>p-q);
+          let lo=0,hi=0;for(let i=0;i<s.length;i++){while(s[lo]<s[i]-win)lo++;while(hi<s.length&&s[hi]<=s[i]+win)hi++;pts.push({px:s[i],v,d:hi-lo});}});
+        const dmax=Math.max(1,...pts.map(q=>q.d));pts.sort((p,q)=>p.d-q.d);
+        pts.forEach(q=>{const op=0.2+0.8*Math.pow((q.d-1)/Math.max(1,dmax-1),0.6);h+=`<circle cx="${q.px.toFixed(1)}" cy="${F.sy(q.v).toFixed(1)}" r="${rad}" fill="var(--point)" fill-opacity="${op.toFixed(2)}"/>`;});}
+      if(state.pop)h+=curve(F,v=>sig(aPop+bPop*v),`stroke="var(--pop)" stroke-width="1.6" stroke-dasharray="6 5"`);
+      if(state.ols)h+=`<line x1="${F.sx(x0)}" y1="${F.sy(O.a+O.b*x0)}" x2="${F.sx(x1)}" y2="${F.sy(O.a+O.b*x1)}" stroke="var(--ols)" stroke-width="2.2" stroke-dasharray="8 5"/>`;
+      if(state.probit&&okP)h+=curve(F,v=>Phi(PR.a+PR.b*v),`stroke="var(--probit)" stroke-width="2.6" stroke-dasharray="1.5 4" stroke-linecap="round"`);
+      if(ok)h+=curve(F,v=>sig(L.a+L.b*v),`stroke="var(--fit)" stroke-width="2.6"`);
+      if(state.bins)B.forEach(g=>{const cx=F.sx(g.x),cy=F.sy(g.p);h+=`<rect x="${cx-4.5}" y="${cy-4.5}" width="9" height="9" transform="rotate(45 ${cx} ${cy})" fill="var(--ink)" stroke="var(--panel)" stroke-width="1"><title>Bin mean ${state.xname.trim()||"X"} = ${f(g.x,2)}: ${g.k} of ${g.m} have ${state.yname.trim()||"Y"} = 1 (${fpr(g.p)})</title></rect>`;});
+      h+=`</g>`;
+      if(ok){const x50=-L.a/L.b;if(x50>x0&&x50<x1){const cx=F.sx(x50),cy=F.sy(.5);
+        h+=`<line x1="${cx}" x2="${cx}" y1="${cy}" y2="${F.sy(-0.25)}" stroke="var(--fit)" stroke-dasharray="3 3"/><circle cx="${cx}" cy="${cy}" r="4.5" fill="var(--panel)" stroke="var(--fit)" stroke-width="2"/>`;
+        const lab=`P = .5 at ${state.xname.trim()||"X"} = ${f(x50,cd(x50)>3?3:Math.max(1,cd(x50)-1))}`,tw=lab.length*7;
+        // candidate spots, those away from the curve first; skip any that leave the plot or cover a bin marker
+        const order=L.b>0?[[-1,-1],[1,1],[1,-1],[-1,1]]:[[1,-1],[-1,1],[-1,-1],[1,1]];
+        const marks=state.bins?B.map(g=>[F.sx(g.x),F.sy(g.p)]):[];
+        const fits=([sxn,syn])=>{const x0=sxn>0?cx+9:cx-9-tw,x1=x0+tw,yb=syn<0?cy-10:cy+18,y0=yb-12,y1=yb+3;
+          if(x0<F.m.l+2||x1>F.m.l+F.pw-2)return false;
+          return !marks.some(([mx,my])=>mx+7>x0&&mx-7<x1&&my+7>y0&&my-7<y1);};
+        const pick=order.find(fits)||order.find(([sxn])=>{const x0=sxn>0?cx+9:cx-9-tw;return x0>=F.m.l+2&&x0+tw<=F.m.l+F.pw-2;})||order[0];
+        h+=`<text x="${cx+(pick[0]>0?9:-9)}" y="${cy+(pick[1]<0?-10:18)}" text-anchor="${pick[0]>0?"start":"end"}" style="fill:var(--fit);font-weight:600;${halo}">${esc(lab)}</text>`;}}
+      $("prob").innerHTML=h;}
+
+    // equations
+    if(ok){const s=L.b<0?"−":"+";
+      $("eq-logit").innerHTML=`Logistic (log odds): ln[<i class="hat lc">p</i>/(1 − <i class="hat lc">p</i>)] = ${fc(L.a)} ${s} ${fc(Math.abs(L.b))}${plain?"<i>X</i>":" × "+XN}`;
+      $("eq-prob").innerHTML=`Logistic (probability): <i class="hat lc">p</i> = 1 / (1 + e<sup>−(${fc(L.a)} ${s} ${fc(Math.abs(L.b))}${plain?"X":" × "+XN})</sup>)`;}
+    else{$("eq-logit").innerHTML="Logistic: no finite estimates for this sample";$("eq-prob").innerHTML="";}
+    const eAbove=ok,phiAbove=state.probit&&okP;
+    $("def-e").innerHTML=eAbove?"where e ≈ 2.718 is the base of the natural logarithm, a value known as Napier’s constant (also called Euler’s number).":"In the logistic model, p = 1/(1 + e<sup>−(a + bX)</sup>), where e ≈ 2.718 is the base of the natural logarithm, a value known as Napier’s constant (also called Euler’s number).";
+    $("def-phi").innerHTML=phiAbove?"where Φ (the capital Greek letter phi) is the cumulative standard normal distribution function: Φ(z) is the proportion of the standard normal distribution that falls below z, the value a z table gives.":"";
+    $("eq-probit").innerHTML=state.probit?(okP?`Probit (normal ogive): <i class="hat lc">p</i> = Φ(${fc(PR.a)} ${PR.b<0?"−":"+"} ${fc(Math.abs(PR.b))}${plain?"<i>X</i>":" × "+XN})`:"Probit: no finite estimates for this sample"):"";
+    $("eq-ols").innerHTML=state.ols?`OLS (linear probability model): <i class="hat uc">P</i> = ${fc(O.a)} ${O.b<0?"−":"+"} ${fc(Math.abs(O.b))}${plain?"<i>X</i>":" × "+XN}`:"";
+
+    // ----- why OLS fails -----
+    {const pred=x.map(v=>O.a+O.b*v),below=pred.filter(v=>v<0).length,above=pred.filter(v=>v>1).length;
+      const xz=-O.a/O.b,xo=(1-O.a)/O.b,lo=Math.min(xz,xo),hi=Math.max(xz,xo);
+      const lowSide=O.b>0?"below 0":"above 1",highSide=O.b>0?"above 1":"below 0";
+      const M=O.mx,S=O.sx,pts=[M-2*S,M,M+2*S];
+      const XL=state.xname.trim()?XN:"X";
+      let t=ok?`<p>The logistic weight for ${XL}, b = ${fc(L.b)}, is like the OLS weight in one important way: it is still the rate of change of something per single-point increase in ${XL}. The difference is the something. In OLS, the something is ${YN} itself, and because the mean of a 0/1 variable is the proportion of 1s, predicted ${YN} is the probability that ${YN} = 1. So the OLS weight for these data, ${fc(O.b)}, says that each point of ${XL} changes the probability that ${YN} = 1 by ${fc(O.b)}, wherever you start. Unfortunately, the probability that ${YN} = 1 is a poor “something”.</p>`
+        :`<p>A logistic weight is like an OLS weight in one important way: it is still the rate of change of something per single-point increase in ${XL}. The difference is the something. In OLS, the something is ${YN} itself, and because the mean of a 0/1 variable is the proportion of 1s, predicted ${YN} is the probability that ${YN} = 1. Unfortunately, the probability that ${YN} = 1 is a poor “something”.</p>`;
+      t+=`<p>Ordinary least squares fits a straight line, and a straight line is the wrong tool when the outcome can only be 0 or 1. The dashed orange line in the plot above is the OLS fit to these data (often called the linear probability model). It has four problems, and the first is the most basic.</p><ol>`;
+      {let D=defaultStory();
+        t+=`<li><strong>The wrong shape.</strong> OLS says that every one-unit increase in ${XL} changes the probability by the same amount, ${fc(O.b)}, wherever you start. A probability cannot keep changing at a constant rate, because it runs out of room near 0 and 1. The logistic curve bends instead. Suppose that the plot above (at the tool’s default input values) showed the probability of getting a moderately difficult math test item right, plotted against the test taker’s math ability (called an item characteristic curve in item response theory). The person whose ability is 2 SDs below the mean has only a slightly better probability of getting the item right than does the person whose ability is 3 SDs below the mean (${fpr(D(-2))} versus ${fpr(D(-3))}), and there is always some chance of getting the item right. The people who are 2 and 3 SDs above the mean are both almost (but not quite) certain to get the item right (${fpr(D(2))} and ${fpr(D(3))}). Where ability (X) matters is in its middle: the probability for a person whose ability is .5 SD above the mean is ${fpr(D(.5))}, whereas the probability for someone whose ability is .5 SD below the mean is ${fpr(D(-.5))}. This is captured in logistic regression and can’t be captured with OLS. (The values in this example come from the default input values, whatever the controls are set to now; click “Return to default values” to see the plot they describe.) This mismatch between a straight line and a quantity that must stay between 0 and 1 is the root of the trouble with OLS here, and it leads directly to the next problem.</li>`;}
+      t+=`<li><strong>Impossible predictions.</strong> A probability must lie between 0 and 1, but a straight line with a nonzero weight eventually crosses both limits. Here the OLS line predicts values ${lowSide} for ${XL} below ${f(lo,cd(lo)>3?2:cd(lo)-1)} and ${highSide} for ${XL} above ${f(hi,cd(hi)>3?2:cd(hi)-1)}. In this sample, ${below+above} of ${n} cases (${pct((below+above)/n)}) get an impossible predicted value: ${below} below 0 and ${above} above 1.</li>`;
+      if(ok){const v=pts.map(v=>{const p=sig(L.a+L.b*v);return p*(1-p);});
+        t+=`<li><strong>Error variance that depends on ${XL}.</strong> This problem and the next have a different source than the first two: because ${YN} can only be 0 or 1, the errors around any line are restricted in ways that OLS ignores. At any given value of ${XL}, ${YN} is a 0/1 variable that equals 1 with some probability p, and the variance of such a variable is p(1 − p). Because an error is just the outcome minus its predicted value, and the predicted value is fixed at a given value of ${XL}, the error variance at that value of ${XL} is also p(1 − p). That variance is largest (.25) where p = .5 and shrinks toward 0 as p approaches 0 or 1, so it changes as ${XL} changes. Using the fitted logistic curve, the error variance is ${fpr(v[0])} at ${XL} = ${f(pts[0],2)} (2 SD below the mean), ${fpr(v[1])} at the mean, and ${fpr(v[2])} at ${XL} = ${f(pts[2],2)} (2 SD above the mean). This violates the OLS assumption of constant error variance, so the usual OLS standard errors, tests and confidence intervals are not trustworthy. Logistic regression has no such assumption to violate. It treats each case as a 0/1 outcome with its own probability p, so the variance p(1 − p) is part of the model itself: maximum likelihood weights each case according to the variance its probability implies, and the standard errors are computed from those case-by-case variances rather than from a single common one.</li>`;}
+      else t+=`<li><strong>Error variance that depends on ${XL}.</strong> This problem and the next have a different source than the first two: because ${YN} can only be 0 or 1, the errors around any line are restricted in ways that OLS ignores. At any given value of ${XL}, ${YN} is a 0/1 variable that equals 1 with some probability p, and the variance of such a variable is p(1 − p). Because an error is just the outcome minus its predicted value, and the predicted value is fixed at a given value of ${XL}, the error variance at that value of ${XL} is also p(1 − p). That variance is largest (.25) where p = .5 and shrinks toward 0 as p approaches 0 or 1, so it changes as ${XL} changes. This violates the OLS assumption of constant error variance, so the usual OLS standard errors, tests and confidence intervals are not trustworthy. Logistic regression has no such assumption to violate. It treats each case as a 0/1 outcome with its own probability p, so the variance p(1 − p) is part of the model itself: maximum likelihood weights each case according to the variance its probability implies, and the standard errors are computed from those case-by-case variances rather than from a single common one.</li>`;
+      t+=`<li><strong>Errors that can't be normal.</strong> For any value of ${XL}, the error Y − <span class="hat uc">P</span> can take only two values: 1 − <span class="hat uc">P</span> when ${YN} = 1 and −<span class="hat uc">P</span> when ${YN} = 0. That is why the residual plot below shows two parallel lines rather than a cloud.</li>`;
+      t+=`</ol><p>Logistic regression avoids all four problems by modeling the log odds rather than the probability itself, so predictions always stay between 0 and 1, and by using maximum likelihood with the binomial distribution, which builds the p(1 − p) variance into the model.</p>`;
+      $("why").innerHTML=t;
+      // residual plot
+      const r=y.map((v,i)=>v-pred[i]),fl=Math.min(...pred,0),fh=Math.max(...pred,1),pad=(fh-fl)*0.05;
+      const F=frame(560,360,[fl-pad,fh+pad,-1.3,1.3],"OLS predicted value",`Residual (${YN} − predicted)`,{yTicks:[-1,-.5,0,.5,1]});
+      let h=F.h;
+      if(fl-pad<0)h+=`<rect x="${F.sx(fl-pad)}" y="${F.m.t}" width="${F.sx(0)-F.sx(fl-pad)}" height="${F.ph}" fill="var(--bad)"/>`;
+      if(fh+pad>1)h+=`<rect x="${F.sx(1)}" y="${F.m.t}" width="${F.sx(fh+pad)-F.sx(1)}" height="${F.ph}" fill="var(--bad)"/>`;
+      h+=`<g ${F.clip}><line x1="${F.m.l}" x2="${F.m.l+F.pw}" y1="${F.sy(0)}" y2="${F.sy(0)}" stroke="var(--muted)"/>`;
+      h+=`<line x1="${F.sx(fl-pad)}" y1="${F.sy(1-(fl-pad))}" x2="${F.sx(fh+pad)}" y2="${F.sy(1-(fh+pad))}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+      h+=`<line x1="${F.sx(fl-pad)}" y1="${F.sy(-(fl-pad))}" x2="${F.sx(fh+pad)}" y2="${F.sy(-(fh+pad))}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+      const rad=n>800?2.2:n>300?2.8:3.4;
+      for(let i=0;i<n;i++)h+=y[i]?`<circle cx="${F.sx(pred[i]).toFixed(1)}" cy="${F.sy(r[i]).toFixed(1)}" r="${rad}" fill="var(--point)" fill-opacity=".55"/>`:`<circle cx="${F.sx(pred[i]).toFixed(1)}" cy="${F.sy(r[i]).toFixed(1)}" r="${rad}" fill="none" stroke="var(--point)" stroke-width="1.2" stroke-opacity=".75"/>`;
+      h+=`</g>`;
+      h+=`<text x="${F.sx(fl-pad)+6}" y="${F.sy(1-(fl-pad))+ (1-(fl-pad)>1.25?40:-8)}" style="${halo};font-size:11px">${YN} = 1: residual = 1 − predicted</text>`;
+      h+=`<text x="${F.sx(fh+pad)-6}" y="${F.sy(-(fh+pad))+(-(fh+pad)<-1.25?-34:16)}" text-anchor="end" style="${halo};font-size:11px">${YN} = 0: residual = −predicted</text>`;
+      $("res").innerHTML=h;
+      const grp=(lo,hi)=>{const e=[];for(let i=0;i<n;i++)if(pred[i]>=lo&&pred[i]<hi)e.push(r[i]*r[i]);return e.length>=5?{m:e.reduce((s,v)=>s+v,0)/e.length,k:e.length}:null;};
+      const gl=grp(-Infinity,.2),gm=grp(.4,.6),gh=grp(.8,Infinity),parts=[];
+      if(gl)parts.push(`${fpr(gl.m)} for the ${gl.k} cases with predicted values below .20`);
+      if(gm)parts.push(`${fpr(gm.m)} for the ${gm.k} cases between .40 and .60`);
+      if(gh)parts.push(`${fpr(gh.m)} for the ${gh.k} cases above .80`);
+      const spread=parts.length>=2?` In this sample, the mean squared residual is ${parts.length===2?parts.join(" and "):parts.slice(0,-1).join(", ")+", and "+parts[parts.length-1]}.`:"";
+      const out=below+above;
+      let rx=`<p><strong>What this plot shows.</strong> Each point is one case, placed at its OLS predicted value (horizontal axis) and its residual, the observed value of ${YN} minus the predicted value (vertical axis). When OLS is appropriate, a plot like this shows a shapeless horizontal band of points centered on 0 and equally wide everywhere. This one departs from that ideal in three ways.</p><ol>`;
+      rx+=`<li><strong>Two lines instead of a cloud.</strong> Because ${YN} can only be 0 or 1, a case’s residual is fixed once its predicted value is known: 1 − <span class="hat uc">P</span> if ${YN} = 1 (filled points, upper line) and −<span class="hat uc">P</span> if ${YN} = 0 (open points, lower line). Both lines slope downward at exactly −1. Residuals that fall on two lines cannot be normally distributed (problem 4 above).</li>`;
+      rx+=`<li><strong>A spread that changes with the predicted value.</strong> Where the predicted value is near 0, almost every case has ${YN} = 0, so most residuals are small negative numbers. Where it is near .5, cases split between the two lines, and residuals of about ±.5 are common. If the predicted values were correct probabilities, the residual variance at a predicted value <span class="hat uc">P</span> would be <span class="hat uc">P</span>(1 − <span class="hat uc">P</span>), which is largest at .5.${spread} This is the unequal error variance problem mentioned earlier.</li>`;
+      rx+=`<li><strong>Impossible predictions.</strong> Points in the shaded strips have predicted values below 0 or above 1 (problem 2)${out?`; ${out} of the ${n} cases in this sample fall there`:`, although none of the cases in this sample do`}. In those strips the residuals stop making sense as errors in a probability. A case with ${YN} = 0 and a predicted value of −.10, for example, has a residual of +.10, as if the model had predicted too little of an outcome that did not occur.</li></ol>`;
+      $("res-explain").innerHTML=rx;}
+
+    // ----- odds and logit plot -----
+    {const XL=state.xname.trim()?XN:"X";
+      let t=`<p>Logistic regression does not model the probability directly. It models the <strong>log odds</strong>, which can take any value from −∞ to +∞, so a straight line on that scale never produces an impossible probability.</p>`;
+      t+=`<p>The <strong>odds</strong> are the probability that ${YN} = 1 divided by the probability that ${YN} = 0: odds = p/(1 − p). A probability of .50 gives odds of 1 (even odds), .75 gives odds of 3 (3 to 1), and .20 gives odds of 0.25 (1 to 4). Odds run from 0 to ∞. Taking their natural log gives the log odds, or <strong>logit</strong>, which is 0 when p = .50, positive when p > .50 and negative when p < .50.</p>`;
+      t+=`<p>On the log-odds scale the model is a straight line, ln[p/(1 − p)] = a + b${XL==="X"?"X":" × "+XL}. Converting each point on that line back to a probability bends it into the S-shaped curve in the first plot.</p>`;
+      if(ok)t+=`<p>The log odds are the “something” for the logistic weight. The weight b = ${fc(L.b)} is the rate of change in the natural log of the odds that ${YN} = 1 per single-point increase in ${XL}: each point of ${XL} changes the log odds by ${fc(L.b)}, everywhere along the line, just as each point changes predicted ${YN} by the same amount everywhere in OLS. What does not stay constant is the change in probability, which is why the curve in the first plot bends.</p>`;
+      $("odds").innerHTML=t;
+      let lo=-4,hi=4;
+      if(ok){const e0=L.a+L.b*x0,e1=L.a+L.b*x1;lo=Math.min(lo,e0,e1);hi=Math.max(hi,e0,e1);}
+      const EB=B.map(g=>({x:g.x,e:Math.log((g.k+.5)/(g.m-g.k+.5))}));
+      if(state.bins)EB.forEach(g=>{lo=Math.min(lo,g.e);hi=Math.max(hi,g.e);});
+      lo=Math.max(lo,-10);hi=Math.min(hi,10);const pad=(hi-lo)*0.06;
+      const right=[[.01,".01"],[.05,".05"],[.1,".10"],[.25,".25"],[.5,".50"],[.75,".75"],[.9,".90"],[.95,".95"],[.99,".99"],[.999,".999"],[.001,".001"]].map(([p,l])=>[logit(p),l]);
+      const F=frame(560,380,[x0,x1,lo-pad,hi+pad],XN,`Log odds that ${YN} = 1`,{right,rightLab:"Probability"});
+      let h=F.h+`<g ${F.clip}>`;
+      if(0>F.y0&&0<F.y1)h+=`<line x1="${F.m.l}" x2="${F.m.l+F.pw}" y1="${F.sy(0)}" y2="${F.sy(0)}" stroke="var(--muted)"/>`;
+      if(ok)h+=`<line x1="${F.sx(x0)}" y1="${F.sy(L.a+L.b*x0)}" x2="${F.sx(x1)}" y2="${F.sy(L.a+L.b*x1)}" stroke="var(--fit)" stroke-width="2.6"/>`;
+      if(state.bins)EB.forEach(g=>{const cx=F.sx(g.x),cy=F.sy(g.e);h+=`<rect x="${cx-4.5}" y="${cy-4.5}" width="9" height="9" transform="rotate(45 ${cx} ${cy})" fill="var(--ink)" stroke="var(--panel)" stroke-width="1"/>`;});
+      h+=`</g>`;
+      $("logit").innerHTML=h;}
+
+    // ----- probit section -----
+    {const XL=state.xname.trim()?XN:"X";
+      let t=`<p>Logistic regression is not the only way to keep predicted probabilities between 0 and 1. Any curve that rises in an S from 0 to 1 will do, and the standard choices are <strong>ogives</strong>: cumulative distribution functions of continuous distributions. The logistic curve, p = 1/(1 + e<sup>−(a + bX)</sup>), is the cumulative <em>logistic</em> distribution. <strong>Probit regression</strong> uses the <strong>normal ogive</strong> instead, the cumulative standard normal distribution: p = Φ(a + bX)${(state.probit&&okP)?"":", where Φ (the capital Greek letter phi) is the cumulative standard normal distribution function: Φ(z) is the proportion of the standard normal distribution that falls below z, the value a z table gives"}.</p>`;
+      t+=`<p><strong>How the two are similar.</strong> Both pass the same linear predictor, a + b${XL==="X"?"X":" × "+XL}, through an ogive, and both are estimated by maximum likelihood. Both can also be derived from the same story: an unobserved continuous variable Y* = a + bX + ε, with ${YN} = 1 whenever Y* > 0. If ε has a logistic distribution, the result is logistic regression; if ε is standard normal, the result is probit regression. In practice the two give nearly identical predicted probabilities, nearly identical estimates of how much the probability changes with ${XL}, and nearly identical tests.</p>`;
+      t+=`<p><strong>How they differ.</strong> The curves differ slightly in the tails, where the logistic distribution is a little heavier. Their weights are on different scales: the standard logistic distribution has an SD of π/√3 ≈ 1.81, and the logistic curve with its argument multiplied by 1.70 never differs from the normal ogive by more than .01. As a result, logistic weights are typically about 1.6 to 1.8 times the corresponding probit weights.`;
+      if(ok&&okP)t+=` In this sample the ratio is ${fc(L.b)} / ${fc(PR.b)} = ${f(L.b/PR.b,2)}, and the largest difference between the two fitted curves across the observed range of ${XL} is ${fpr(Math.max(...Array.from({length:201},(_,i)=>{const v=Math.min(...x)+(Math.max(...x)-Math.min(...x))*i/200;return Math.abs(sig(L.a+L.b*v)-Phi(PR.a+PR.b*v));})))}.`;
+      t+=` The weights also mean different things. A probit weight is the change in the z score that feeds the normal ogive, that is, the change in Y* in units of its error SD, per unit of ${XL}. There is no probit counterpart to the odds ratio. And unlike the logistic curve, Φ has no closed-form formula, so probit probabilities must be computed numerically.</p>`;
+      $("ogive").innerHTML=t;
+      // comparison plot
+      {const F=frame(560,360,[x0,x1,-0.05,1.05],XN,`Probability that ${YN} = 1`,{yTicks:[0,.25,.5,.75,1],yFmt:t=>t===0||t===1?String(t):fpr(t).replace(/0+$/,"")});
+        let g=F.h+`<g ${F.clip}>`;
+        if(state.bins)B.forEach(q=>{const cx=F.sx(q.x),cy=F.sy(q.p);g+=`<rect x="${cx-4.5}" y="${cy-4.5}" width="9" height="9" transform="rotate(45 ${cx} ${cy})" fill="var(--ink)" stroke="var(--panel)" stroke-width="1"/>`;});
+        if(ok)g+=curve(F,v=>sig(L.a+L.b*v),`stroke="var(--fit)" stroke-width="2.6"`);
+        if(okP)g+=curve(F,v=>Phi(PR.a+PR.b*v),`stroke="var(--probit)" stroke-width="2.8" stroke-dasharray="1.5 4" stroke-linecap="round"`);
+        g+=`</g>`;$("cmp").innerHTML=g;$("lg-bins3").hidden=!state.bins;}
+      $("t-cmp").innerHTML=`Fitted logistic curve and normal ogive`;
+      let w=`<p><strong>When is probit preferable?</strong> Because the two models almost always lead to the same conclusions, the choice usually rests on theory, convenience and convention rather than on fit. Probit is the better choice in three situations:</p><ul>`+
+        `<li><strong>A normally distributed latent variable.</strong> Probit follows directly when the 0/1 outcome is best thought of as a continuous, normally distributed variable that has been cut at a threshold: a test score above or below a passing mark, a tolerance that has or has not been exceeded, an attitude strong enough to produce a “yes.” This is the reasoning behind dose-response probit analysis, Thurstone scaling and normal-ogive item response models.</li>`+
+        `<li><strong>Models built from several normal variables.</strong> Because normal errors combine easily, probit is the building block for models that tie a binary outcome to other equations: bivariate and multivariate probit for correlated binary outcomes, Heckman-type sample-selection models, instrumental-variable probit for an endogenous predictor, and structural equation models with categorical indicators, which typically assume normal latent responses (tetrachoric and polychoric correlations).</li>`+
+        `<li><strong>Disciplinary convention.</strong> Probit is more common in economics, so readers there may expect it. Logistic regression dominates medicine, epidemiology and much of the rest of the social sciences.</li></ul>`;
+      w+=`<p>Logistic regression has its own advantages. Its weights convert to odds ratios, which have a simple multiplicative interpretation. Its probability formula has a closed form, so predictions can be computed by hand. And in case-control studies, where cases and non-cases are sampled separately, logistic weights (though not the intercept) still estimate the population odds ratios, a property probit lacks. When the two models do differ, it is in the tails, so with large samples and many probabilities close to 0 or 1, it can be worth comparing their fit.`;
+      if(ok&&okP){const dl=-2*L.ll,dp=-2*PR.ll,d=Math.abs(+dl.toFixed(2)-+dp.toFixed(2)),better=dl<dp?"logistic":"probit";
+        w+=` In this sample, −2LL is ${f(dl,2)} for the logistic model and ${f(dp,2)} for the probit model. Because the models have the same number of parameters, this comparison is the same as comparing AIC, and the smaller value (here, the ${better} model) fits slightly better. ${d<2?`A difference of ${f(d,2)}, less than 2 points, is generally treated as negligible: both models are about equally well supported.`:`A difference of ${f(d,2)} points, 2 or more, is generally taken to favor the ${better} model.`}`;}
+      w+=`</p>`;
+      $("when").innerHTML=w;
+
+      $("t-probit").innerHTML=okP?
+        `<tr><td>Intercept</td><td>${fc(PR.a)}</td><td>${fc(PR.seA)}</td><td>${f(PR.a/PR.seA,2)}</td><td>${fp(pZ(PR.a/PR.seA))}</td></tr>`+
+        `<tr><td>Weight for ${XN}</td><td>${fc(PR.b)}</td><td>${fc(PR.seB)}</td><td>${f(PR.b/PR.seB,2)}</td><td>${fp(pZ(PR.b/PR.seB))}</td></tr>`:
+        `<tr><td colspan="5">No finite estimates for this sample.</td></tr>`;}
+
+    // ----- interpretation -----
+    {const XL=state.xname.trim()?XN:"X";
+      if(ok){const OR=Math.exp(L.b),ORsd=Math.exp(L.b*O.sx),chg=OR-1,x50=-L.a/L.b,xmin=Math.min(...x),xmax=Math.max(...x);
+        const dir=L.b>=0?"increase":"decrease";
+        let t=`<p>The logistic regression equation is the equation for the curve of best fit: the S-shaped curve that makes the observed 0s and 1s most likely (maximum likelihood). Its weights are on the log-odds scale.</p>`;
+        t+=`<p>The regression weight, b = ${fc(L.b)}, is the rate of change in the natural log of the odds that ${YN} = 1 per single-point increase in ${XL}. Because log odds are hard to interpret, the weight is usually converted to an <strong>odds ratio</strong>, e<sup>b</sup> = ${f(OR,3)}. For every unit increase in ${XL}, the odds that ${YN} = 1 are multiplied by ${f(OR,3)}, a ${f(Math.abs(chg)*100,1)}% ${dir} in the odds. Over one standard deviation of ${XL} (${f(O.sx,2)} units), the odds are multiplied by e<sup>b × SD</sup> = ${f(ORsd,3)}. An odds ratio of 1 means no association; values below 1 mean the odds decrease as ${XL} increases.</p>`;
+        t+=`<p>The odds ratio is constant, but the change in <em>probability</em> is not. For a small change in ${XL}, the probability changes at the rate b × p(1 − p). That rate is largest where p = .50, at ${XL} = −a/b = ${f(x50,2)}, where it equals b/4 = ${fc(L.b/4)} per unit, and it shrinks toward 0 as p approaches 0 or 1.</p>`;
+        t+=`<p>The other value in the equation, a = ${fc(L.a)}, is the log odds that ${YN} = 1 when ${XL} = 0. Converted, that is odds of ${fc(Math.exp(L.a))} and a probability of ${fpr(sig(L.a))}.${(0<xmin||0>xmax)?` Because ${XL} = 0 lies outside the range of these data (${f(xmin,2)} to ${f(xmax,2)}), those values are extrapolations. Like the OLS intercept, a mainly places the line on the vertical axis of the log-odds plot, where it crosses at ${XL} = 0.`:""}</p>`;
+        $("interp").innerHTML=t;}
+      else $("interp").innerHTML="";}
+
+    $("fit-intro").innerHTML=
+      `<p><strong>How overall fit is judged.</strong> Logistic regression has no sums of squares, so it has no R² in the OLS sense. Fit is judged instead by the <strong>likelihood</strong>: the probability of observing exactly these 0s and 1s if the model’s predicted probabilities were true. This likelihood is found by multiplying together, across all cases, the probability the model assigns to each case’s actual outcome: the predicted probability that ${YN} = 1 for a case with ${YN} = 1, and 1 minus that probability for a case with ${YN} = 0. Multiplying many numbers (n = ${n} in this case) below 1 produces an extremely small number${ok?` (${sci(L.ll)} for these data)`:""}, so the likelihood is reported as <strong>−2LL</strong>, minus two times its natural log. Smaller values mean better fit; −2LL would be 0 only if every case were predicted perfectly.</p>`+
+      `<ul><li><strong>Likelihood-ratio χ².</strong> The −2LL for a model with no predictor, which predicts the overall proportion of 1s for everyone, minus the −2LL for the model with ${XN}. If ${XN} is unrelated to ${YN} in the population, this difference approximately follows a χ² distribution with degrees of freedom equal to the number of predictors added (here, 1). It tests whether the predictors improve prediction, the role the F test plays in OLS.</li>`+
+      `<li><strong>Pseudo R².</strong> Several indices mimic R² by comparing the two −2LL values. McFadden’s R² is the proportional reduction in −2LL. Cox &amp; Snell’s R² is based on the likelihood ratio, but its maximum is below 1 even for a perfect model, so Nagelkerke’s R² rescales it to reach 1. None of them is a proportion of variance explained, and they can differ considerably, so a value should be compared only with the same index for other models, not with an OLS R².</li>`+
+      `<li><strong>AIC</strong> (Akaike’s information criterion) is −2LL plus 2 times the number of estimated parameters. The penalty discourages adding predictors that improve fit only trivially. AIC has no meaning on its own; it is used to compare models of the same cases, and smaller is better.</li>`+
+      `<li><strong>AUC</strong> (the area under the ROC curve, also called the c statistic) measures how well the predicted probabilities separate the two groups: it is the probability that a randomly chosen case with ${YN} = 1 has a higher predicted probability than a randomly chosen case with ${YN} = 0, with ties counting half. It runs from .5 (no better than chance) to 1 (perfect separation). A common rule of thumb treats .70 to .80 as acceptable, .80 to .90 as excellent, and .90 or more as outstanding.</li></ul>`;
+    // ----- results tables -----
+    if(ok){const zA=L.a/L.seA,zB=L.b/L.seB,lr=2*(L.ll-L.ll0);
+      $("t-coef").innerHTML=
+        `<tr><td>Intercept (a)</td><td>${fc(L.a)}</td><td>${fc(L.seA)}</td><td>${f(zA,2)}</td><td>${fp(pZ(zA))}</td><td>${fc(Math.exp(L.a))}</td><td>—</td></tr>`+
+        `<tr><td>Weight for ${XN} (b)</td><td>${fc(L.b)}</td><td>${fc(L.seB)}</td><td>${f(zB,2)}</td><td>${fp(pZ(zB))}</td><td>${f(Math.exp(L.b),3)}</td><td>[${f(Math.exp(L.b-1.959964*L.seB),3)}, ${f(Math.exp(L.b+1.959964*L.seB),3)}]</td></tr>`+
+        `<tr><td>Per SD of ${XN} (b × ${f(O.sx,2)})</td><td>${fc(L.b*O.sx)}</td><td>${fc(L.seB*O.sx)}</td><td>${f(zB,2)}</td><td>${fp(pZ(zB))}</td><td>${f(Math.exp(L.b*O.sx),3)}</td><td>[${f(Math.exp((L.b-1.959964*L.seB)*O.sx),3)}, ${f(Math.exp((L.b+1.959964*L.seB)*O.sx),3)}]</td></tr>`;
+      const cs=1-Math.exp(2*(L.ll0-L.ll)/n),nk=cs/(1-Math.exp(2*L.ll0/n));
+      const p=x.map(v=>sig(L.a+L.b*v));
+      {const lr2=2*(L.ll-L.ll0),pl=pChi1(lr2),mf=1-L.ll/L.ll0,A=auc(p,y),aic0=-2*L.ll0+2,aic1=-2*L.ll+4;
+        const mfr=+mf.toFixed(3),mfq=mfr<.2?"below the .2 to .4 range that McFadden described as excellent fit":mfr<=.4?"within the .2 to .4 range that McFadden described as excellent fit":"above the .2 to .4 range that McFadden described as excellent fit";
+        const Ar=+A.toFixed(3),aq=Ar<.6?"little or no better than chance":Ar<.7?"below the .70 often treated as the threshold for acceptable discrimination":Ar<.8?"acceptable discrimination by the usual rule of thumb":Ar<.9?"excellent discrimination by the usual rule of thumb":"outstanding discrimination by the usual rule of thumb";
+        $("fit-interp").innerHTML=`<p>Here, adding ${XN} reduces −2LL from ${f(-2*L.ll0,2)} to ${f(-2*L.ll,2)}, a drop of ${f(lr2,2)}. Compared with a χ² distribution with 1 df, ${pl<.05?`that drop is statistically significant (${pEq(pl)}), so ${XN} improves the prediction of ${YN} beyond simply predicting the overall proportion of 1s for everyone`:`that drop is not statistically significant (${pEq(pl)}), so these data give no clear evidence that ${XN} improves the prediction of ${YN} beyond predicting the overall proportion of 1s`}.</p>`+
+          `<p>McFadden’s R² of ${fpr(mf)} means that −2LL is ${f(100*mf,1)}% smaller with ${XN} in the model, ${mfq}. ${fpr(cs)!==fpr(nk)||fpr(cs)!==fpr(mf)?`Cox &amp; Snell’s R² (${fpr(cs)}) and Nagelkerke’s R² (${fpr(nk)}) give different numbers for the same model, which is why a report should always name the index it uses.`:`Cox &amp; Snell’s and Nagelkerke’s R² are also ${fpr(cs)} here, but in general the indices give different numbers for the same model, which is why a report should always name the index it uses.`} The AIC of ${f(aic1,2)} means little on its own, but the model with no predictor has an AIC of ${f(aic0,2)} (its −2LL plus 2), so the model with ${XN} is ${aic1<aic0?"preferred":"not preferred"}. Finally, the AUC of ${fpr(A)} means that in ${f(100*A,1)}% of pairs made up of one case with ${YN} = 1 and one with ${YN} = 0, the model gives the case with ${YN} = 1 the higher predicted probability: ${aq}.</p>`;}
+      $("t-fit").innerHTML=
+        `<tr><td>−2LL, no predictor</td><td>${f(-2*L.ll0,2)}</td></tr>`+
+        `<tr><td>−2LL, model</td><td>${f(-2*L.ll,2)}</td></tr>`+
+        `<tr><td>Likelihood-ratio χ²(1)</td><td>${f(lr,2)}, ${pEq(pChi1(lr))}</td></tr>`+
+        `<tr><td>McFadden R²</td><td>${fpr(1-L.ll/L.ll0)}</td></tr>`+
+        `<tr><td>Cox &amp; Snell R²</td><td>${fpr(cs)}</td></tr>`+
+        `<tr><td>Nagelkerke R²</td><td>${fpr(nk)}</td></tr>`+
+        `<tr><td>AIC</td><td>${f(-2*L.ll+4,2)}</td></tr>`+
+        `<tr><td>AUC (c statistic)</td><td>${fpr(auc(p,y))}</td></tr>`+
+        `<tr><td>n (with ${YN} = 1)</td><td>${n} (${k})</td></tr>`;
+      let tp=0,fn=0,fpn=0,tn=0;for(let i=0;i<n;i++){const h=p[i]>=state.cut;if(y[i])h?tp++:fn++;else h?fpn++:tn++;}
+      $("cap-class").innerHTML=`Classification (predict ${YN} = 1 when <span class="hat lc">p</span> ≥ ${fpr(state.cut).replace(/0$/,"")})`;
+      const pc=(a,b)=>a+b?pct(a/(a+b)):"—";
+      $("t-class").innerHTML=`<tr><td>${YN} = 0</td><td>${tn}</td><td>${fpn}</td><td>${pc(tn,fpn)}</td></tr><tr><td>${YN} = 1</td><td>${fn}</td><td>${tp}</td><td>${pc(tp,fn)}</td></tr>`;
+      const base=Math.max(k,n-k)/n;
+      // ---- reporting beyond log odds, classification plot and its interpretation ----
+      const cutTxt=fpr(state.cut).replace(/0$/,"");
+      $("beyond").innerHTML=`<p>Fit statistics like these tell us whether the model works, but neither they nor the log-odds weights are easy to put into everyday terms. Because log odds are counterintuitive, logistic regression results are usually reported along with values that are easier to grasp. The odds ratio in the coefficient table is one. Others describe how well the model sorts the cases: each case’s predicted probability that ${YN} = 1; a classification of each case as a predicted 1 or a predicted 0, depending on whether its predicted probability reaches a cutoff (usually .50); the percentages of cases classified correctly; and the AUC in the model fit table.</p>`+
+        `<p>A <strong>classification table</strong> cross-tabulates each case’s observed value of ${YN} (the rows) with its predicted value (the columns). A case is predicted to have ${YN} = 1 if its predicted probability is at or above the cutoff and ${YN} = 0 otherwise. Cases on the diagonal, observed 0 and predicted 0 or observed 1 and predicted 1, are classified correctly; the other two cells are errors. The % correct column gives the share of each row classified correctly: for ${YN} = 1 this is the <strong>sensitivity</strong>, and for ${YN} = 0 it is the <strong>specificity</strong>.</p>`;
+      {const m1=p.reduce((s,v,i)=>s+(y[i]?v:0),0)/k,m0=p.reduce((s,v,i)=>s+(y[i]?0:v),0)/(n-k);
+        $("class-interp").innerHTML=`<p>With a cutoff of ${cutTxt}, ${tp} of the ${k} cases with ${YN} = 1 have predicted probabilities of ${cutTxt} or higher and are classified correctly (sensitivity = ${pc(tp,fn)}), and ${tn} of the ${n-k} cases with ${YN} = 0 have predicted probabilities below ${cutTxt} and are classified correctly (specificity = ${pc(tn,fpn)}). The two off-diagonal cells hold the ${fn+fpn} misclassified cases: ${fn} with ${YN} = 1 predicted to be 0 and ${fpn} with ${YN} = 0 predicted to be 1. Overall, ${pct((tp+tn)/n)} of cases are classified correctly. That figure should be judged against ${pct(base)}, the accuracy from simply predicting the more common outcome for everyone.</p>`+
+          `<p>Errors occur because ${XN} predicts ${YN} imperfectly: the average predicted probability is ${fpr(m1)} for cases with ${YN} = 1 and ${fpr(m0)} for cases with ${YN} = 0, so some cases of each kind land on the wrong side of the cutoff. Moving the cutoff (under Classification in the controls) trades one kind of error for the other. Lowering it classifies more cases as 1, so sensitivity rises or stays the same while specificity falls or stays the same; raising it does the reverse. The AUC of ${fpr(auc(p,y))} summarizes how well the predicted probabilities separate the two groups across every possible cutoff.</p>`;}
+      $("t-class2").innerHTML=`<tr><td>Overall accuracy</td><td>${pct((tp+tn)/n)}</td></tr><tr><td>Sensitivity (${YN} = 1 correctly predicted)</td><td>${pc(tp,fn)}</td></tr><tr><td>Specificity (${YN} = 0 correctly predicted)</td><td>${pc(tn,fpn)}</td></tr><tr><td>Accuracy from always predicting the more common value</td><td>${pct(base)}</td></tr>`;
+    }else{
+      $("t-coef").innerHTML=`<tr><td colspan="7">No finite estimates for this sample.</td></tr>`;
+      $("t-fit").innerHTML=`<tr><td>n (with ${YN} = 1)</td><td>${n} (${k})</td></tr>`;
+      $("t-class").innerHTML=`<tr><td colspan="4">—</td></tr>`;$("t-class2").innerHTML="";
+      $("cap-class").innerHTML="Classification";
+      $("beyond").innerHTML="";$("fit-interp").innerHTML="";$("class-interp").innerHTML="";
+    }
+    if(state.moreE){const ex=ok?` (here, e<sup>${fc(L.b)}</sup> = ${f(Math.exp(L.b),3)})`:"";
+      $("more-e").innerHTML=
+      `<h3>e, Napier’s constant</h3>`+
+      `<p><strong>How it is computed.</strong> e = 2.718281828459045… is an irrational number, so its decimals never end and never settle into a repeating pattern. One way to compute it is as the limit of (1 + 1/n)<sup>n</sup> as n grows: (1 + 1/1)<sup>1</sup> = 2, (1 + 1/10)<sup>10</sup> = 2.594, and (1 + 1/1000)<sup>1000</sup> = 2.717. A faster route is the series e = 1 + 1/1! + 1/2! + 1/3! + …, whose first 11 terms already give 2.7182818. Jacob Bernoulli found the constant in 1683 while studying compound interest: $1 earning 100% interest a year, compounded more and more often, grows by year’s end to an amount that approaches e dollars, about $2.72. It is called Napier’s constant because of its close connection to the logarithms John Napier published in 1614, and Leonhard Euler gave it the letter e.</p>`+
+      `<p><strong>Where it shows up.</strong> e appears whenever something changes at a rate proportional to its current size. Compound interest is one example: compounded continuously, an amount P grows to Pe<sup>rt</sup>. A bacterial colony with plenty of food grows the same way, N(t) = N<sub>0</sub>e<sup>rt</sup>, because more bacteria produce more new bacteria. Radioactive decay runs the process in reverse, N(t) = N<sub>0</sub>e<sup>−λt</sup>: every atom has the same chance of decaying in any instant, so the amount lost is proportional to the amount left. That is why each radioactive element has a fixed half-life, ln 2/λ, such as about 5,730 years for carbon-14. The same equation describes a drug cleared from the bloodstream at a rate proportional to its concentration, a cup of coffee cooling toward room temperature (Newton’s law of cooling) and a capacitor discharging. The logistic curve belongs to this family too. Pierre-François Verhulst introduced it in 1838 to describe the full course of a population’s growth: starting from a few individuals, numbers rise slowly at first, then faster and faster, grow fastest when the population reaches half the limit its environment can support, and then slow again and level off as they approach that limit. The same S-curve is used for the spread of epidemics and the adoption of new products.</p>`+
+      `<p><strong>How logistic regression uses it.</strong> e is the base of the natural logarithm: ln(y) = x means e<sup>x</sup> = y, so raising e to a power undoes a natural log. Logistic regression works on the natural-log-of-the-odds scale, ln[p/(1 − p)] = a + bX, and e is what carries its results back to odds and probabilities. The odds are e<sup>a + bX</sup>, the odds ratio is e<sup>b</sup>${ex}, and the probability is p = 1/(1 + e<sup>−(a + bX)</sup>). The natural log is used rather than, say, a base-10 log because e<sup>x</sup> has a uniquely convenient property: its rate of change at any point equals its own value. That property is what makes the rate of change of the logistic curve the simple expression b × p(1 − p).</p>`;}
+    if(state.morePhi){$("more-phi").innerHTML=
+      `<h3>Φ, the cumulative standard normal distribution</h3>`+
+      `<p><strong>How it is computed.</strong> Φ(z) is the area under the standard normal curve to the left of z. That curve, the normal density, is φ(z) = e<sup>−z²/2</sup>/√(2π) (lowercase phi; e appears here too), and Φ(z) = ∫<sub>−∞</sub><sup>z</sup> φ(t) dt. The integral has no closed-form solution, so Φ is computed numerically, with series expansions or high-precision approximation formulas. This tool uses an approximation accurate to within about 1 part in 10 million. A z table lists the same values: Φ(0) = .5000, Φ(1) = .8413, Φ(1.645) = .9500 and Φ(1.96) = .9750.</p>`+
+      `<p><strong>Where it shows up.</strong> Φ applies wherever a quantity is roughly normally distributed and the question is what proportion falls below, or above, some value. Gauss used the normal distribution for errors in astronomical measurements, and it describes many measured traits and test scores reasonably well. With IQ scores scaled to a mean of 100 and an SD of 15, a score of 130 is z = 2, and Φ(2) = .977, so about 97.7% of people score lower. In personnel selection, if applicants’ test scores are normally distributed, 1 − Φ(z) is the proportion who pass a cutoff at z, the selection ratio. Manufacturers use Φ to find the proportion of parts that will fall within tolerance limits. The probit model itself began in dose-response research: Chester Bliss coined the word “probit” in 1934 while studying insect deaths at different pesticide doses. If the insects’ tolerance thresholds are normally distributed, the proportion killed at each dose follows the normal ogive. The same reasoning underlies normal-ogive item response models in psychometrics, where the probability of answering an item correctly rises as a normal ogive of ability. And because of the central limit theorem, sample means and many test statistics are approximately normal, which is why Φ supplies p values throughout statistics.</p>`+
+      `<p><strong>How probit regression and this tool use it.</strong> Φ turns a z score into a cumulative proportion, so it appears wherever normal-theory probabilities do. In probit regression, the linear predictor a + bX is treated as a z score, and Φ converts it to a probability: p = Φ(a + bX). That is exactly what happens under the latent-variable story above when ε is standard normal: P(Y* > 0) = Φ(a + bX). Φ also produces the p values in this tool: a Wald z has two-sided p = 2[1 − Φ(|z|)], and because a χ² with 1 df is the square of a z, the likelihood-ratio test’s p comes from Φ as well.</p>`;}
+
+  }
+
+  // ---------- controls ----------
+  function bind(key,parse=parseFloat){
+    const s=$(key),nn=$(key+"-n");s.value=state[key];nn.value=state[key];
+    s.addEventListener("input",()=>{state[key]=parse(s.value);nn.value=s.value;render();});
+    nn.addEventListener("change",()=>{let v=parse(nn.value);if(!isFinite(v))v=state[key];
+      if(nn.min!=="")v=Math.max(+nn.min,v);if(nn.max!=="")v=Math.min(+nn.max,v);state[key]=v;nn.value=v;s.value=v;render();});
+  }
+  bind("p0");bind("mx");bind("sx");bind("n",v=>Math.round(+v));bind("cut");
+  {const s=$("or"),nn=$("or-n");s.value=Math.log(state.or);nn.value=state.or;
+    s.addEventListener("input",()=>{const v=Math.round(Math.exp(+s.value)*10)/10;state.or=Math.max(1,v);nn.value=state.or;render();});
+    nn.addEventListener("change",()=>{let v=parseFloat(nn.value);if(!isFinite(v))v=state.or;v=Math.min(20,Math.max(1,v));state.or=v;nn.value=v;s.value=Math.log(v);render();});}
+  function setDir(d){state.dir=d;$("pos").setAttribute("aria-pressed",d>0);$("neg").setAttribute("aria-pressed",d<0);render();}
+  $("pos").addEventListener("click",()=>setDir(1));$("neg").addEventListener("click",()=>setDir(-1));
+  $("more-e-btn").addEventListener("click",()=>{state.moreE=!state.moreE;$("more-e-btn").setAttribute("aria-pressed",state.moreE);$("more-e").hidden=!state.moreE;render();});
+  $("more-phi-btn").addEventListener("click",()=>{state.morePhi=!state.morePhi;$("more-phi-btn").setAttribute("aria-pressed",state.morePhi);$("more-phi").hidden=!state.morePhi;render();});
+  function syncInputs(){["p0","mx","sx","n","cut"].forEach(k=>{$(k).value=state[k];$(k+"-n").value=state[k];});
+    $("or").value=Math.log(state.or);$("or-n").value=state.or;
+    $("pos").setAttribute("aria-pressed",state.dir>0);$("neg").setAttribute("aria-pressed",state.dir<0);
+    ["ols","probit","bins","pop"].forEach(k=>{$(k).checked=state[k];});}
+  $("reset").addEventListener("click",()=>{Object.assign(state,DEF);syncInputs();render();});
+  $("resample").addEventListener("click",()=>{state.seed=Math.floor(Math.random()*1e9);render();});
+  ["ols","probit","bins","pop"].forEach(k=>{$(k).checked=state[k];$(k).addEventListener("change",e=>{state[k]=e.target.checked;render();});});
+  ["xname","yname"].forEach(k=>$(k).addEventListener("input",e=>{state[k]=e.target.value;render();}));
+  // lets the own-data section load the sample currently on screen
+  window.LRE_currentSample=()=>{const g=generate();return{x:g.x,y:g.y,xname:state.xname.trim()||"X",yname:state.yname.trim()||"Y"};};
+  render();
+})();
+</script>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const MISSING=new Set(["","na","n/a","nan",".","null"]);
+  const isMiss=v=>MISSING.has(String(v).trim().toLowerCase());
+
+  // ---------- math ----------
+  function erfc(x){const z=Math.abs(x),t=1/(1+0.5*z);
+    const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));
+    return x>=0?r:2-r;}
+  const Phi=x=>0.5*erfc(-x/Math.SQRT2), phi=x=>Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);
+  const sig=e=>e>=0?1/(1+Math.exp(-e)):Math.exp(e)/(1+Math.exp(e));
+  const pZ=z=>!isFinite(z)?0:erfc(Math.abs(z)/Math.SQRT2);
+  function lgamma(x){const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+    if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);x-=1;let a=c[0];const t=x+7.5;for(let i=1;i<9;i++)a+=c[i]/(x+i);return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);}
+  function gammq(a,x){ // upper regularized incomplete gamma
+    if(x<=0)return 1;
+    if(x<a+1){let sum=1/a,del=sum,ap=a;for(let n=0;n<500;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-15)break;}
+      return 1-sum*Math.exp(-x+a*Math.log(x)-lgamma(a));}
+    let b=x+1-a,c=1/1e-300,d=1/b,h=d;for(let i=1;i<500;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-15)break;}
+    return Math.exp(-x+a*Math.log(x)-lgamma(a))*h;}
+  const pChi=(x,df)=>x<=0?1:gammq(df/2,x/2);
+
+  // Cholesky-based solve and inverse for symmetric positive definite matrices
+  function chol(A){const n=A.length,L=A.map(r=>r.map(()=>0));
+    for(let i=0;i<n;i++)for(let j=0;j<=i;j++){let s=A[i][j];for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];
+      if(i===j){if(!(s>1e-12*Math.max(1,Math.abs(A[i][i]))))return null;L[i][i]=Math.sqrt(s);}else L[i][j]=s/L[j][j];}
+    return L;}
+  function cholSolve(L,b){const n=L.length,y=new Array(n),x=new Array(n);
+    for(let i=0;i<n;i++){let s=b[i];for(let k=0;k<i;k++)s-=L[i][k]*y[k];y[i]=s/L[i][i];}
+    for(let i=n-1;i>=0;i--){let s=y[i];for(let k=i+1;k<n;k++)s-=L[k][i]*x[k];x[i]=s/L[i][i];}
+    return x;}
+  const cholInv=L=>{const n=L.length,I=[];for(let j=0;j<n;j++){const e=new Array(n).fill(0);e[j]=1;I.push(cholSolve(L,e));}return I;};
+
+  // ---------- model fitting (Newton/Fisher scoring) ----------
+  function linkFns(link){
+    if(link==="logit")return{F:sig,f:e=>{const p=sig(e);return p*(1-p);},fp:e=>{const p=sig(e);return p*(1-p)*(1-2*p);},
+      w:e=>{const p=sig(e);return p*(1-p);},score:(y,e)=>y-sig(e),
+      ll:(y,e)=>{const lp=e>=0?-Math.log1p(Math.exp(-e)):e-Math.log1p(Math.exp(e));return y?lp:lp-e;}};
+    return{F:Phi,f:phi,fp:e=>-e*phi(e),
+      w:e=>{const p=Math.min(Math.max(Phi(e),1e-12),1-1e-12),d=phi(e);return d*d/(p*(1-p));},
+      score:(y,e)=>{const p=Math.min(Math.max(Phi(e),1e-12),1-1e-12);return (y-p)*phi(e)/(p*(1-p));},
+      ll:(y,e)=>{const p=Math.min(Math.max(Phi(e),1e-300),1-1e-16);return y?Math.log(p):Math.log(1-p);}};
+  }
+  function fit(X,y,link){
+    const n=y.length,k=X[0].length,L=linkFns(link),ybar=y.reduce((s,v)=>s+v,0)/n;
+    let b=new Array(k).fill(0);b[0]=link==="logit"?Math.log(ybar/(1-ybar)):Math.log(ybar/(1-ybar))/1.6;
+    const eta=bb=>X.map(r=>{let s=0;for(let j=0;j<k;j++)s+=r[j]*bb[j];return s;});
+    const LL=bb=>{const e=eta(bb);let s=0;for(let i=0;i<n;i++)s+=L.ll(y[i],e[i]);return s;};
+    const info=e=>{const I=Array.from({length:k},()=>new Array(k).fill(0));for(let i=0;i<n;i++){const w=L.w(e[i]),r=X[i];for(let a=0;a<k;a++){const wa=w*r[a];for(let c=0;c<=a;c++)I[a][c]+=wa*r[c];}}for(let a=0;a<k;a++)for(let c=0;c<a;c++)I[c][a]=I[a][c];return I;};
+    let cur=LL(b),conv=false,it;
+    for(it=0;it<60;it++){
+      const e=eta(b),g=new Array(k).fill(0);for(let i=0;i<n;i++){const s=L.score(y[i],e[i]);for(let j=0;j<k;j++)g[j]+=s*X[i][j];}
+      const Ch=chol(info(e));if(!Ch)return{fail:"singular"};
+      const step=cholSolve(Ch,g);let t=1,nb,nl;
+      for(;;){nb=b.map((v,j)=>v+t*step[j]);nl=LL(nb);if(nl>=cur-1e-10||t<1e-10)break;t/=2;}
+      const ch=Math.max(...nb.map((v,j)=>Math.abs(v-b[j])/(1+Math.abs(v))));b=nb;cur=nl;
+      if(ch<1e-10){conv=true;break;}
+    }
+    const e=eta(b),Ch=chol(info(e));if(!Ch)return{fail:"singular"};
+    const V=cholInv(Ch),se=V.map((r,j)=>Math.sqrt(r[j]));
+    const ll0=n*(ybar*Math.log(ybar)+(1-ybar)*Math.log(1-ybar));
+    const p=e.map(L.F),extreme=e.some(v=>Math.abs(v)>(link==="logit"?25:8.5));
+    return{b,se,V,ll:cur,ll0,p,eta:e,conv,iter:it+1,extreme,link,L};
+  }
+  function auc(p,y){const idx=p.map((v,i)=>i).sort((i,j)=>p[i]-p[j]),rank=new Array(p.length);
+    for(let i=0;i<idx.length;){let j=i;while(j+1<idx.length&&p[idx[j+1]]===p[idx[i]])j++;const r=(i+j)/2+1;for(let m=i;m<=j;m++)rank[idx[m]]=r;i=j+1;}
+    let n1=0,s=0;for(let i=0;i<y.length;i++)if(y[i]){n1++;s+=rank[i];}return(s-n1*(n1+1)/2)/(n1*(y.length-n1));}
+  function rocPoints(p,y){const n1=y.reduce((s,v)=>s+v,0),n0=y.length-n1,idx=p.map((v,i)=>i).sort((i,j)=>p[j]-p[i]);
+    const pts=[[0,0]];let tp=0,fp=0;for(let i=0;i<idx.length;){const v=p[idx[i]];while(i<idx.length&&p[idx[i]]===v){y[idx[i]]?tp++:fp++;i++;}pts.push([fp/n0,tp/n1]);}return pts;}
+  function hosmer(p,y,g){const n=p.length,idx=p.map((v,i)=>i).sort((i,j)=>p[i]-p[j]),rows=[];let chi=0;
+    for(let q=0;q<g;q++){const lo=Math.round(q*n/g),hi=Math.round((q+1)*n/g);let o1=0,e1=0;for(let j=lo;j<hi;j++){o1+=y[idx[j]];e1+=p[idx[j]];}
+      const m=hi-lo,o0=m-o1,e0=m-e1;if(m===0)continue;chi+=(e1>0?(o1-e1)**2/e1:0)+(e0>0?(o0-e0)**2/e0:0);rows.push({q:q+1,m,o1,e1,o0,e0});}
+    const df=rows.length-2;return{chi,df,p:df>0?pChi(chi,df):NaN,rows};}
+
+  // ---------- formatting ----------
+  const f=(v,d=3)=>!isFinite(v)?(v>0?"∞":v<0?"−∞":"—"):(Math.abs(v)<0.5*Math.pow(10,-d)?(0).toFixed(d):v.toFixed(d)).replace("-","−");
+  const cd=v=>{const a=Math.abs(v);return a>=100?1:a>=10?2:a>=0.1?3:a>=0.01?4:5;};
+  const fc=v=>f(v,cd(v));
+  const fp=p=>!isFinite(p)?"—":p<.001?"< .001":p.toFixed(3).replace(/^0/,"");
+  const fpr=p=>f(p,3).replace(/^0\./,".").replace(/^−0\./,"−.");
+  const pct=v=>isFinite(v)?(100*v).toFixed(1)+"%":"—";
+  const pEq=p=>p<.001?"p < .001":"p = "+fp(p);
+  const plain=s=>String(s).replace(/<sup>(.*?)<\/sup>/g,"^$1").replace(/<sub>(.*?)<\/sub>/g,"_$1").replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/−/g,"-").replace(/ /g," ");
+
+  // ---------- parsing ----------
+  function parse(text){
+    text=text.replace(/^﻿/,"").replace(/\r\n?/g,"\n");
+    const first=text.split("\n").find(l=>l.trim()!=="")||"";
+    const count=ch=>{let c=0,q=false;for(const x of first){if(x==='"')q=!q;else if(!q&&x===ch)c++;}return c;};
+    const cands=[["\t",count("\t")],[",",count(",")],[";",count(";")]].sort((a,b)=>b[1]-a[1]);
+    const d=cands[0][1]>0?cands[0][0]:",";
+    const rows=[];let row=[],cell="",q=false;
+    for(let i=0;i<text.length;i++){const c=text[i];
+      if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=c;}
+      else if(c==='"')q=true;else if(c===d){row.push(cell);cell="";}else if(c==="\n"){row.push(cell);rows.push(row);row=[];cell="";}else cell+=c;}
+    row.push(cell);rows.push(row);
+    const clean=rows.filter(r=>r.some(v=>v.trim()!==""));
+    if(clean.length<2)throw new Error("I need a row of variable names and at least one row of data.");
+    let names=clean[0].map((s,i)=>s.trim()||("V"+(i+1)));
+    const seen={};names=names.map(nm=>{if(seen[nm]){seen[nm]++;return nm+"_"+seen[nm];}seen[nm]=1;return nm;});
+    const data=clean.slice(1).map(r=>names.map((_,j)=>(r[j]??"").trim()));
+    return{names,data,delim:d};
+  }
+  function describe(names,data){
+    return names.map((nm,j)=>{const vals=data.map(r=>r[j]).filter(v=>!isMiss(v));const num=vals.length>0&&vals.every(v=>v!==""&&isFinite(+v));
+      const distinct=[...new Set(vals)];
+      distinct.sort(num?(a,b)=>+a-+b:(a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+      return{name:nm,j,num,distinct,nmiss:data.length-vals.length};});
+  }
+
+  // ---------- downloads and copying ----------
+  async function saveFile(filename,text){
+    const msg=$("od-dl-msg");msg.textContent="";
+    let dl=null;
+    try{if(window.claude&&typeof window.claude.use==="function")dl=await window.claude.use("downloads");}catch(e){dl=null;}
+    if(dl){try{await dl.save({filename,data:text});msg.textContent=`Saved ${filename}.`;}
+      catch(e){const c=e&&e.code;msg.textContent=c==="declined"?"Download cancelled.":c==="rate_limited"?"A save prompt is already open; finish it and try again.":"Downloads aren’t available in this view. Use the Copy buttons beside each table instead.";}
+      return;}
+    try{const a=document.createElement("a"),url=URL.createObjectURL(new Blob([text],{type:filename.endsWith(".svg")?"image/svg+xml":"text/csv;charset=utf-8"}));
+      a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+      msg.textContent=`Downloading ${filename}. If nothing happens, this page may be inside a frame that blocks downloads; open the tool on its own page, or use the Copy buttons.`;}
+    catch(e){msg.textContent="This browser blocked the download. Use the Copy buttons beside each table instead.";}
+  }
+  const csvCell=v=>{const s=String(v);return/[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const toCSV=rows=>rows.map(r=>r.map(csvCell).join(",")).join("\r\n");
+
+  // ---------- state ----------
+  let DS=null,RES=null;
+  const tables=[]; // {title, head:[...], rows:[[...]]} in plain text, for CSV and copying
+
+  function setMsg(id,html,warn){const el=$(id);el.innerHTML=html?`<p${warn?' class="warn-p"':''}>${html}</p>`:"";}
+
+  function loadText(text,label){
+    try{const P=parse(text);DS={...P,cols:describe(P.names,P.data)};}
+    catch(e){DS=null;$("od-model").hidden=true;$("od-out").hidden=true;$("od-preview").innerHTML="";setMsg("od-data-msg",esc(e.message),true);return;}
+    const n=DS.data.length,delimName={",":"comma",";":"semicolon","\t":"tab"}[DS.delim];
+    setMsg("od-data-msg",`Read ${n} row${n===1?"":"s"} and ${DS.names.length} variable${DS.names.length===1?"":"s"}${label?` from ${esc(label)}`:""} (${delimName}-separated). The first rows are shown below.`);
+    const show=DS.data.slice(0,5);
+    $("od-preview").innerHTML=`<table class="small"><thead><tr>${DS.names.map(n=>`<th>${esc(n)}</th>`).join("")}</tr></thead><tbody>${show.map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    setMsg("od-run-msg","");buildModelUI();$("od-model").hidden=false;$("od-out").hidden=true;
+  }
+
+  function buildModelUI(){
+    const bin=DS.cols.filter(c=>c.distinct.length===2);
+    const ysel=$("od-y");
+    if(!bin.length){ysel.innerHTML="";setMsg("od-run-msg","None of these variables has exactly two distinct values, so there is no outcome for a logistic or probit regression.",true);$("od-x").innerHTML="";$("od-ev").innerHTML="";return;}
+    ysel.innerHTML=bin.map(c=>`<option value="${c.j}">${esc(c.name)}</option>`).join("");
+    ysel.onchange=()=>{fillEvent();fillX();};
+    fillEvent();fillX();
+  }
+  function fillEvent(){
+    const c=DS.cols[+$("od-y").value],pref=c.distinct.find(v=>/^(1|yes|y|true|t)$/i.test(v))??c.distinct[1];
+    $("od-ev").innerHTML=c.distinct.map(v=>`<option value="${esc(v)}"${v===pref?" selected":""}>${esc(v)}</option>`).join("");
+  }
+  function fillX(){
+    const yj=+$("od-y").value;
+    $("od-x").innerHTML=DS.cols.filter(c=>c.j!==yj).map(c=>{
+      const tooMany=!c.num&&c.distinct.length>30,constant=c.distinct.length<2;
+      const type=c.num?`numeric${c.nmiss?`, ${c.nmiss} missing`:""}`:`categorical, ${c.distinct.length} categories${c.nmiss?`, ${c.nmiss} missing`:""}`;
+      const canCat=c.num&&c.distinct.length>2&&c.distinct.length<=10;
+      const dis=tooMany||constant;
+      return `<div class="xrow" data-j="${c.j}"><label class="check"><input type="checkbox" class="x-use"${dis?" disabled":""}> <span><strong>${esc(c.name)}</strong> <span class="hint">(${type}${constant?"; constant, so it can’t be used":""}${tooMany?"; too many categories":""})</span></span></label>`+
+        (canCat?`<label class="check sub"><input type="checkbox" class="x-cat"> Treat as categorical</label>`:"")+
+        (!c.num&&!dis?`<label class="sub ref">Reference category <select class="sel x-ref">${c.distinct.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")}</select></label>`:"")+
+        (c.num&&canCat?`<label class="sub ref" hidden>Reference category <select class="sel x-ref">${c.distinct.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")}</select></label>`:"")+
+        `</div>`;}).join("")||`<p class="hint">There are no other variables to use as predictors.</p>`;
+    $("od-x").querySelectorAll(".x-cat").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".xrow").querySelector(".ref").hidden=!cb.checked;}));
+  }
+
+  // ---------- run ----------
+  function run(){
+    tables.length=0;
+    const yj=+$("od-y").value,ev=$("od-ev").value,model=document.querySelector('input[name="od-mod"]:checked').value;
+    let cut=parseFloat($("od-cut").value);if(!(cut>0&&cut<1)){cut=0.5;$("od-cut").value=0.5;}
+    const preds=[...$("od-x").querySelectorAll(".xrow")].filter(r=>r.querySelector(".x-use")?.checked).map(r=>{const j=+r.dataset.j,c=DS.cols[j];
+      const cat=!c.num||!!r.querySelector(".x-cat")?.checked;return{j,name:c.name,cat,ref:cat?r.querySelector(".x-ref").value:null,levels:c.distinct};});
+    if(!preds.length){setMsg("od-run-msg","Choose at least one predictor.",true);$("od-out").hidden=true;return;}
+    // listwise deletion
+    const used=[],skip=[];DS.data.forEach((r,i)=>{(isMiss(r[yj])||preds.some(p=>isMiss(r[p.j])))?skip.push(i):used.push(i);});
+    // design matrix
+    const terms=["Intercept"],termInfo=[{kind:"int"}];
+    preds.forEach(p=>{if(!p.cat){terms.push(p.name);termInfo.push({kind:"num",p});}
+      else p.levels.filter(l=>l!==p.ref).forEach(l=>{terms.push(`${p.name}: ${l} (vs. ${p.ref})`);termInfo.push({kind:"dum",p,level:l});});});
+    const X=used.map(i=>{const r=DS.data[i];return termInfo.map(t=>t.kind==="int"?1:t.kind==="num"?+r[t.p.j]:(r[t.p.j]===t.level?1:0));});
+    const y=used.map(i=>DS.data[i][yj]===ev?1:0);
+    const n=y.length,k1=y.reduce((s,v)=>s+v,0),k=terms.length;
+    const msgs=[];
+    if(n<k+1){setMsg("od-run-msg",`Only ${n} complete case${n===1?"":"s"} remain, too few for ${k} parameters.`,true);$("od-out").hidden=true;return;}
+    if(k1===0||k1===n){setMsg("od-run-msg",`Every complete case has the same outcome value, so no model can be estimated.`,true);$("od-out").hidden=true;return;}
+    {const mu=new Array(k).fill(0),sd=new Array(k).fill(0);for(const r of X)for(let j=1;j<k;j++)mu[j]+=r[j]/n;for(const r of X)for(let j=1;j<k;j++)sd[j]+=(r[j]-mu[j])**2;
+      const Z=X.map(r=>r.map((v,j)=>j===0?1:(sd[j]>0?(v-mu[j])/Math.sqrt(sd[j]/n):0))),A=Array.from({length:k},()=>new Array(k).fill(0));
+      for(const r of Z)for(let a=0;a<k;a++)for(let c=0;c<=a;c++)A[a][c]+=r[a]*r[c]/n;for(let a=0;a<k;a++)for(let c=0;c<a;c++)A[c][a]=A[a][c];
+      const Lc=chol(A),bad=sd.slice(1).some(v=>v===0)||!Lc||Lc.some((r,i)=>r[i]<1e-5);
+      if(bad){
+        setMsg("od-run-msg","The predictors are perfectly collinear, or a predictor or category is constant among the complete cases, so the model can’t be estimated. Remove a redundant predictor or merge sparse categories.",true);$("od-out").hidden=true;return;}}
+    const models=model==="both"?["logit","probit"]:[model];
+    const fits={};
+    for(const m of models){const R=fit(X,y,m);
+      if(R.fail==="singular"){setMsg("od-run-msg","<strong>Complete separation.</strong> A predictor, or a combination of predictors, perfectly separates the cases with one outcome value from the cases with the other. The likelihood keeps increasing as the weights grow, so maximum likelihood estimates do not exist (they are infinite). Software that reports estimates here is reporting where its iterations stopped. Remove or combine the predictor responsible, or consider a penalized method such as Firth’s logistic regression.",true);$("od-out").hidden=true;return;}
+      fits[m]=R;}
+    const sepWarn=Object.values(fits).some(R=>!R.conv||R.extreme);
+    if(sepWarn)msgs.push("<strong>Possible separation.</strong> Some predicted probabilities are essentially 0 or 1, or the estimates did not settle down. This usually means a predictor (or combination of predictors) perfectly or almost perfectly separates the two outcome groups. In that case the maximum likelihood estimates for those predictors are infinite or unstable, and their standard errors and p values should not be trusted.");
+    const epv=Math.min(k1,n-k1)/(k-1);
+    if(epv<10)msgs.push(`There are ${f(epv,1)} cases in the less common outcome group per estimated weight. A common rule of thumb asks for at least 10; with fewer, estimates can be biased and unstable.`);
+    setMsg("od-run-msg","");if(msgs.length)$("od-run-msg").innerHTML=msgs.map(m=>`<p class="warn-p">${m}</p>`).join("");
+
+    RES={yj,ev,preds,used,skip,terms,termInfo,X,y,n,k1,k,cut,fits,models};
+    renderResults();$("od-out").hidden=false;$("od-dl-msg").textContent="";
+  }
+
+  // average marginal effects with delta-method standard errors
+  function ame(R,X,termInfo){
+    const n=X.length,k=X[0].length,L=R.L,out=[];
+    for(let j=1;j<k;j++){const t=termInfo[j];let est=0;const g=new Array(k).fill(0);
+      if(t.kind==="dum"){const sib=termInfo.map((u,m)=>u.kind==="dum"&&u.p===t.p?m:-1).filter(m=>m>=0);
+        for(let i=0;i<n;i++){const x1=X[i].slice(),x0=X[i].slice();sib.forEach(m=>{x1[m]=0;x0[m]=0;});x1[j]=1;
+          let e1=0,e0=0;for(let m=0;m<k;m++){e1+=x1[m]*R.b[m];e0+=x0[m]*R.b[m];}
+          est+=L.F(e1)-L.F(e0);const f1=L.f(e1),f0=L.f(e0);for(let m=0;m<k;m++)g[m]+=f1*x1[m]-f0*x0[m];}}
+      else{for(let i=0;i<n;i++){const e=R.eta[i],fe=L.f(e),fpe=L.fp(e);est+=R.b[j]*fe;g[j]+=fe;for(let m=0;m<k;m++)g[m]+=R.b[j]*fpe*X[i][m];}}
+      est/=n;for(let m=0;m<k;m++)g[m]/=n;
+      let v=0;for(let a=0;a<k;a++)for(let c=0;c<k;c++)v+=g[a]*R.V[a][c]*g[c];
+      out.push({est,se:Math.sqrt(v),kind:t.kind});}
+    return out;}
+
+  function tableHTML(title,head,rows,opts={}){
+    tables.push({title,head:head.map(plain),rows:rows.map(r=>r.map(plain))});
+    const id=tables.length-1;
+    return `<div class="own-tbl${opts.narrow?" narrow":""}"><div class="tbl-head"><span>${title}</span><button type="button" class="copy-btn" data-t="${id}">Copy</button></div><div class="tbl-wrap"><table>${head.length?`<thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`:""}<tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`;
+  }
+
+  function renderResults(){
+    const R=RES,yname=esc(DS.names[R.yj]),evE=esc(R.ev),other=DS.cols[R.yj].distinct.find(v=>v!==R.ev);
+    let h="";
+    // case processing
+    h+=tableHTML("Case processing summary",[],[
+      ["Rows in the data",DS.data.length],["Excluded for missing values (listwise)",R.skip.length],["Cases analyzed",R.n],
+      [`${yname} = ${evE} (coded 1)`,R.k1],[`${yname} = ${esc(other)} (coded 0)`,R.n-R.k1]],{narrow:true});
+    const cats=R.preds.filter(p=>p.cat);
+    if(cats.length)h+=tableHTML("Dummy coding of categorical predictors",["Predictor","Reference category","Other categories (one dummy each)"],cats.map(p=>[esc(p.name),esc(p.ref),p.levels.filter(l=>l!==p.ref).map(esc).join(", ")]));
+    const names={logit:"Logistic regression",probit:"Probit regression"};
+    const summaries=[];
+    for(const m of R.models){const F=R.fits[m],z=F.b.map((v,j)=>v/F.se[j]),zc=1.959964;
+      h+=`<h4 class="own-h">${names[m]}</h4>`;
+      if(m==="logit")h+=tableHTML(`${names[m]}: coefficients`,["Term","B","SE","z","p","Odds ratio (e<sup>B</sup>)","95% CI for odds ratio"],
+        R.terms.map((t,j)=>[esc(t),fc(F.b[j]),fc(F.se[j]),f(z[j],2),fp(pZ(z[j])),fc(Math.exp(F.b[j])),j===0?"—":`[${fc(Math.exp(F.b[j]-zc*F.se[j]))}, ${fc(Math.exp(F.b[j]+zc*F.se[j]))}]`]));
+      else h+=tableHTML(`${names[m]}: coefficients`,["Term","B","SE","z","p","95% CI for B"],
+        R.terms.map((t,j)=>[esc(t),fc(F.b[j]),fc(F.se[j]),f(z[j],2),fp(pZ(z[j])),`[${fc(F.b[j]-zc*F.se[j])}, ${fc(F.b[j]+zc*F.se[j])}]`]));
+      const A=ame(F,R.X,R.termInfo);
+      h+=tableHTML(`${names[m]}: average marginal effects on P(${yname} = ${evE})`,["Term","AME","SE","z","p","95% CI"],
+        A.map((a,i)=>[esc(R.terms[i+1]),fc(a.est),fc(a.se),f(a.est/a.se,2),fp(pZ(a.est/a.se)),`[${fc(a.est-zc*a.se)}, ${fc(a.est+zc*a.se)}]`]));
+      const lr=2*(F.ll-F.ll0),df=R.k-1,cs=1-Math.exp(2*(F.ll0-F.ll)/R.n),nk=cs/(1-Math.exp(2*F.ll0/R.n)),A1=auc(F.p,R.y);
+      h+=tableHTML(`${names[m]}: model fit`,[],[["−2LL, no predictors",f(-2*F.ll0,2)],["−2LL, model",f(-2*F.ll,2)],[`Likelihood-ratio χ²(${df})`,`${f(lr,2)}, ${pEq(pChi(lr,df))}`],
+        ["McFadden R²",fpr(1-F.ll/F.ll0)],["Cox &amp; Snell R²",fpr(cs)],["Nagelkerke R²",fpr(nk)],["AIC",f(-2*F.ll+2*R.k,2)],["BIC",f(-2*F.ll+R.k*Math.log(R.n),2)],["AUC (c statistic)",fpr(A1)],["Iterations",F.iter+(F.conv?"":" (did not converge)")]],{narrow:true});
+      const g=Math.min(10,Math.floor(R.n/5)),HL=g>=3?hosmer(F.p,R.y,g):null;
+      if(HL&&HL.df>0)h+=tableHTML(`${names[m]}: Hosmer–Lemeshow test, χ²(${HL.df}) = ${f(HL.chi,2)}, ${pEq(HL.p)}`,["Group","Cases",`Observed ${evE}`,`Expected ${evE}`,`Observed ${esc(other)}`,`Expected ${esc(other)}`],
+        HL.rows.map(r=>[r.q,r.m,r.o1,f(r.e1,2),r.o0,f(r.e0,2)]));
+      let tp=0,fn=0,fpn=0,tn=0;for(let i=0;i<R.n;i++){const c=F.p[i]>=R.cut;if(R.y[i])c?tp++:fn++;else c?fpn++:tn++;}
+      const pc=(a,b)=>a+b?pct(a/(a+b)):"—",cutT=fpr(R.cut).replace(/0+$/,"").replace(/\.$/,"");
+      h+=tableHTML(`${names[m]}: classification (predicted ${evE} when p̂ ≥ ${cutT})`,["Observed",`Predicted ${esc(other)}`,`Predicted ${evE}`,"% correct"],
+        [[esc(other),tn,fpn,pc(tn,fpn)],[evE,fn,tp,pc(tp,fn)],["Overall","","",pct((tp+tn)/R.n)]]);
+      // summary sentences
+      const hold=R.terms.length>2?", holding the other predictors constant":"";
+      let s=`<p><strong>${names[m]}.</strong> The model with ${R.preds.map(p=>esc(p.name)).join(", ")} fit ${pChi(lr,df)<.05?"significantly better":"no significantly better"} than a model with no predictors, χ²(${df}, N = ${R.n}) = ${f(lr,2)}, ${pEq(pChi(lr,df))}, Nagelkerke R² = ${fpr(nk)}, AUC = ${fpr(A1)}.`;
+      if(m==="logit")s+=" "+R.terms.slice(1).map((t,i)=>{const j=i+1;return `For ${esc(t)}, OR = ${fc(Math.exp(F.b[j]))}, 95% CI [${fc(Math.exp(F.b[j]-zc*F.se[j]))}, ${fc(Math.exp(F.b[j]+zc*F.se[j]))}], ${pEq(pZ(z[j]))}${R.termInfo[j].kind==="dum"?"":` (the odds of ${yname} = ${evE} are multiplied by ${fc(Math.exp(F.b[j]))} for each one-unit increase${hold})`}.`;}).join(" ");
+      else s+=" "+R.terms.slice(1).map((t,i)=>{const a=A[i];return `For ${esc(t)}, the average marginal effect is ${fc(a.est)}, 95% CI [${fc(a.est-zc*a.se)}, ${fc(a.est+zc*a.se)}], ${pEq(pZ(a.est/a.se))}${a.kind==="dum"?" (the average difference in probability from the reference category)":` (the average change in the probability of ${yname} = ${evE} per one-unit increase)`}.`;}).join(" ");
+      summaries.push(s);
+    }
+    if(R.models.length===2){const a=R.fits.logit,b=R.fits.probit;
+      h+=`<h4 class="own-h">Logistic and probit compared</h4>`+tableHTML("Logistic and probit fit compared",["Statistic","Logistic","Probit"],[["−2LL",f(-2*a.ll,2),f(-2*b.ll,2)],["AIC",f(-2*a.ll+2*R.k,2),f(-2*b.ll+2*R.k,2)],["BIC",f(-2*a.ll+R.k*Math.log(R.n),2),f(-2*b.ll+R.k*Math.log(R.n),2)],["AUC",fpr(auc(a.p,R.y)),fpr(auc(b.p,R.y))]]);}
+    h+=`<h4 class="own-h">Results in words</h4><div class="prose">${summaries.join("")}<p class="note">Wald tests and confidence intervals. Average marginal effects average each case’s change in predicted probability; for a numeric predictor this is the instantaneous rate of change, and for a dummy-coded category it is the difference from the reference category. Their standard errors use the delta method. The Hosmer–Lemeshow test groups cases into ${Math.min(10,Math.floor(R.n/5))} groups of nearly equal size by predicted probability; programs differ in how they form groups, so its value can differ slightly across software. Probit standard errors use the expected information, as in R’s glm.</p></div>`;
+    h+=`<h4 class="own-h">ROC curve</h4><div class="figure"><svg id="od-roc" viewBox="0 0 420 400" role="img" aria-label="ROC curve"></svg></div>`;
+    const single=R.preds.length===1&&!R.preds[0].cat;
+    if(single)h+=`<h4 class="own-h">Fitted ${R.models.length===2?"curves":"curve"}</h4><div class="figure"><svg id="od-curve" viewBox="0 0 560 380" role="img" aria-label="Fitted probability curve"></svg></div>`;
+    $("od-results").innerHTML=h;
+    drawROC();if(single)drawCurve();
+    $("od-results").querySelectorAll(".copy-btn").forEach(b=>b.addEventListener("click",async()=>{const t=tables[+b.dataset.t],txt=[[t.title],t.head,...t.rows].filter(r=>r.length).map(r=>r.join("\t")).join("\n");
+      try{await navigator.clipboard.writeText(txt);b.textContent="Copied";setTimeout(()=>b.textContent="Copy",1500);}catch(e){b.textContent="Copy blocked";setTimeout(()=>b.textContent="Copy",2000);}}));
+  }
+
+  // ---------- plots ----------
+  const COL={logit:"var(--fit)",probit:"var(--probit)"},NAME={logit:"Logistic",probit:"Probit"};
+  function frame(W,H,lims,xl,yl){const m={l:56,r:14,t:12,b:44},pw=W-m.l-m.r,ph=H-m.t-m.b,[x0,x1,y0,y1]=lims;
+    const sx=v=>m.l+(v-x0)/(x1-x0)*pw,sy=v=>m.t+ph-(v-y0)/(y1-y0)*ph;
+    const ticks=(lo,hi,c)=>{const raw=(hi-lo)/c,mag=Math.pow(10,Math.floor(Math.log10(raw))),nm=raw/mag,st=(nm<1.5?1:nm<3?2:nm<7?5:10)*mag,o=[];for(let v=Math.ceil(lo/st-1e-9)*st;v<=hi+1e-9;v+=st)o.push(+v.toFixed(10));return o;};
+    let h="";ticks(x0,x1,5).forEach(t=>{h+=`<line x1="${sx(t)}" x2="${sx(t)}" y1="${m.t}" y2="${m.t+ph}" stroke="var(--grid)"/><text x="${sx(t)}" y="${m.t+ph+17}" text-anchor="middle">${+t.toFixed(6)}</text>`;});
+    ticks(y0,y1,5).forEach(t=>{h+=`<line x1="${m.l}" x2="${m.l+pw}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)"/><text x="${m.l-7}" y="${sy(t)+4}" text-anchor="end">${+t.toFixed(6)}</text>`;});
+    h+=`<rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" fill="none" stroke="var(--rule)"/><text x="${m.l+pw/2}" y="${H-6}" text-anchor="middle" style="fill:var(--ink);font-size:13px">${xl}</text><text transform="translate(14 ${m.t+ph/2}) rotate(-90)" text-anchor="middle" style="fill:var(--ink);font-size:13px">${yl}</text>`;
+    return{h,sx,sy,m,pw,ph};}
+  function drawROC(){const R=RES,F=frame(420,400,[0,1,0,1],"False positive rate (1 − specificity)","True positive rate (sensitivity)");
+    let h=F.h+`<line x1="${F.sx(0)}" y1="${F.sy(0)}" x2="${F.sx(1)}" y2="${F.sy(1)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+    R.models.forEach((m,i)=>{const pts=rocPoints(R.fits[m].p,R.y);h+=`<polyline points="${pts.map(([a,b])=>F.sx(a).toFixed(1)+","+F.sy(b).toFixed(1)).join(" ")}" fill="none" stroke="${COL[m]}" stroke-width="2.4"${m==="probit"&&R.models.length===2?' stroke-dasharray="2 4" stroke-linecap="round"':""}/>`;
+      h+=`<text x="${F.sx(0.98)}" y="${F.sy(0.06+0.07*i)}" text-anchor="end" style="fill:${COL[m]};font-weight:600">${NAME[m]}: AUC = ${fpr(auc(R.fits[m].p,R.y))}</text>`;});
+    $("od-roc").innerHTML=h;}
+  function drawCurve(){const R=RES,xs=R.X.map(r=>r[1]),lo=Math.min(...xs),hi=Math.max(...xs),pad=(hi-lo||1)*.05,x0=lo-pad,x1=hi+pad;
+    const F=frame(560,380,[x0,x1,-0.05,1.05],esc(R.terms[1]),`P(${esc(DS.names[R.yj])} = ${esc(R.ev)})`);let h=F.h;
+    for(let i=0;i<R.n;i++)h+=`<circle cx="${F.sx(xs[i]).toFixed(1)}" cy="${F.sy(R.y[i]).toFixed(1)}" r="3" fill="var(--point)" fill-opacity=".25"/>`;
+    const idx=xs.map((v,i)=>i).sort((a,b)=>xs[a]-xs[b]),nb=Math.max(4,Math.min(10,Math.round(R.n/25)));
+    for(let g=0;g<nb;g++){const a=Math.round(g*R.n/nb),b=Math.round((g+1)*R.n/nb);if(b<=a)continue;let sx=0,s1=0;for(let j=a;j<b;j++){sx+=xs[idx[j]];s1+=R.y[idx[j]];}const cx=F.sx(sx/(b-a)),cy=F.sy(s1/(b-a));
+      h+=`<rect x="${cx-4.5}" y="${cy-4.5}" width="9" height="9" transform="rotate(45 ${cx} ${cy})" fill="var(--ink)" stroke="var(--panel)"/>`;}
+    R.models.forEach((m,i)=>{const Fm=R.fits[m];let d="";for(let s=0;s<=160;s++){const v=x0+(x1-x0)*s/160,e=Fm.b[0]+Fm.b[1]*v;d+=(d?"L":"M")+F.sx(v).toFixed(1)+","+F.sy(Fm.L.F(e)).toFixed(1);}
+      h+=`<path d="${d}" fill="none" stroke="${COL[m]}" stroke-width="2.6"${m==="probit"&&R.models.length===2?' stroke-dasharray="1.5 4" stroke-linecap="round"':""}/>`;
+      h+=`<text x="${F.m.l+8}" y="${F.m.t+18+16*i}" style="fill:${COL[m]};font-weight:600">${NAME[m]}</text>`;});
+    h+=`<text x="${F.m.l+F.pw-8}" y="${F.m.t+F.ph-10}" text-anchor="end" style="fill:var(--ink)">◆ observed proportion in a bin</text>`;
+    $("od-curve").innerHTML=h;}
+
+  // ---------- predicted values ----------
+  function predCSV(){const R=RES,head=["row",...DS.names,"analyzed","y_coded"];
+    R.models.forEach(m=>{const t=m==="logit"?"logistic":"probit";head.push(`p_${t}`,`predicted_${t}`,`pearson_resid_${t}`,`deviance_resid_${t}`);});
+    const pos=new Map(R.used.map((r,i)=>[r,i]));
+    const rows=DS.data.map((r,ri)=>{const i=pos.get(ri),out=[ri+1,...r];if(i===undefined){out.push("no","");R.models.forEach(()=>out.push("","","",""));return out;}
+      out.push("yes",R.y[i]);R.models.forEach(m=>{const p=R.fits[m].p[i],yy=R.y[i],pr=(yy-p)/Math.sqrt(p*(1-p)),dv=Math.sign(yy-p)*Math.sqrt(-2*(yy?Math.log(Math.max(p,1e-300)):Math.log(Math.max(1-p,1e-300))));
+        out.push(p.toPrecision(8),p>=R.cut?1:0,pr.toPrecision(6),dv.toPrecision(6));});return out;});
+    return toCSV([head,...rows]);}
+
+  // ---------- wiring ----------
+  $("od-file").addEventListener("change",e=>{const file=e.target.files[0];if(!file)return;$("od-file-name").textContent=file.name;
+    const rd=new FileReader();rd.onload=()=>{$("od-text").value=String(rd.result).slice(0,200000);loadText(String(rd.result),file.name);};rd.onerror=()=>setMsg("od-data-msg","That file couldn’t be read.",true);rd.readAsText(file);});
+  $("od-read").addEventListener("click",()=>{$("od-file-name").textContent="";loadText($("od-text").value,"");});
+  $("od-sim").addEventListener("click",()=>{if(!window.LRE_currentSample)return;const s=window.LRE_currentSample(),q=v=>/[",\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v;
+    const txt=[q(s.yname)+","+q(s.xname),...s.x.map((v,i)=>s.y[i]+","+(+v.toFixed(4)))].join("\n");$("od-text").value=txt;$("od-file-name").textContent="";loadText(txt,"the simulated sample");});
+  $("od-run").addEventListener("click",run);
+  $("od-dl-tables").addEventListener("click",()=>{if(!RES)return;const rows=[];tables.forEach(t=>{rows.push([t.title]);if(t.head.length)rows.push(t.head);t.rows.forEach(r=>rows.push(r));rows.push([]);});saveFile("logistic_results_tables.csv",toCSV(rows));});
+  $("od-dl-pred").addEventListener("click",()=>{if(RES)saveFile("logistic_predicted_values.csv",predCSV());});
+  $("od-dl-roc").addEventListener("click",()=>{const s=$("od-roc");if(!s)return;const pal={"--fit":"#8A2F5B","--probit":"#2F6B3A","--muted":"#56687A","--grid":"#E1E7EC","--rule":"#D3DCE3","--ink":"#16222E","--panel":"#FFFFFF","--point":"#2E6A8E"};
+    let src=s.outerHTML.replace("<svg",`<svg xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif" font-size="12"`);Object.entries(pal).forEach(([t,v])=>{src=src.split(`var(${t})`).join(v);});
+    src=src.replace(/<text /g,`<text fill="#56687A" `);saveFile("roc_curve.svg",`<?xml version="1.0" encoding="UTF-8"?>\n`+src.replace(/<svg([^>]*)>/,`<svg$1><rect width="100%" height="100%" fill="#ffffff"/>`));});
+})();
+</script>
+
+</body>
+</html>
